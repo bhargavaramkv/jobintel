@@ -3,7 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.5. Phases 1–6 (app shell + local profile, job discovery, matching, referral leads, outreach, application tracking) are done. See
+**Status:** v0.6. Phases 1–7 (app shell + local profile, job discovery, matching, referral leads, outreach, application tracking, scheduled automation + reminders) are done. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -78,6 +78,14 @@ most twice, a week apart, and stop when the person replies.
 outcome. Each stage change is kept in a history. Record next actions, follow-up dates, interviews, the resume
 version you used, linked referral contacts and feedback. You can add jobs you found elsewhere, and JobIntel
 stops you from tracking the same company and title twice by accident.
+
+## Automation and reminders (Phase 7)
+
+Scans run three times a day in GitHub Actions. *Job Discovery → Sources* shows source health, the last 20 scans
+and roughly when the next one runs. If a scan or deploy fails, the workflow opens a `scan-failure` issue (GitHub
+notifies you) and the last good feed stays online; the next good run closes the issue. The dashboard's *Today*
+panel lists interviews and follow-ups due, and you can turn on a once-a-day browser reminder that works while
+JobIntel is open in a tab.
 
 ## Applied tracking and feedback
 

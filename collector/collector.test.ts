@@ -4,7 +4,7 @@ import { parseAshby, parseGreenhouse, parseLever, type RawJob, type SourceConfig
 import { makeTitleFilter } from './filter.ts'
 import { classifyLocations, normalizeWorkMode } from './location.ts'
 import { dedupeKey, mergeFeed, type MergeOptions, type SourceResult } from './merge.ts'
-import { collect, serializeFeed } from './run.ts'
+import { collect, serializeFeed, summarizeScan, withScanLog } from './run.ts'
 import { extractRequirements, htmlToText } from './text.ts'
 import config from './config.json' with { type: 'json' }
 
@@ -254,6 +254,26 @@ describe('collect + serialize', () => {
     const text = serializeFeed(feed)
     expect(feedSchema.parse(JSON.parse(text))).toEqual(feed)
     expect(text.split('\n').filter((l) => l.startsWith('{"id"'))).toHaveLength(2)
+  })
+
+  it('keeps a bounded scan log with added/closed counts and serializes it', () => {
+    const r1 = [ok(sourceA, [raw('1'), raw('2', 'Backend Engineer')]), fail(sourceB)]
+    const f1 = mergeFeed(null, r1, opts('2026-11-01T00:00:00Z'))
+    const s1 = summarizeScan(f1, r1, new Date('2026-11-01T00:00:00Z'))
+    expect(s1).toMatchObject({ sourcesOk: 1, sourcesFailed: 1, open: 2, added: 2, closed: 0 })
+    const logged1 = withScanLog(f1, null, s1)
+
+    const r2 = [ok(sourceA, [raw('1')])]
+    const f2 = mergeFeed(logged1, r2, opts('2026-11-02T00:00:00Z'))
+    const s2 = summarizeScan(f2, r2, new Date('2026-11-02T00:00:00Z'))
+    expect(s2).toMatchObject({ added: 0, closed: 1, open: 1 })
+    const logged2 = withScanLog(f2, logged1, s2)
+    expect(logged2.recentScans!.map((x) => x.at)).toEqual(['2026-11-02T00:00:00.000Z', '2026-11-01T00:00:00.000Z'])
+    expect(feedSchema.parse(JSON.parse(serializeFeed(logged2)))).toEqual(logged2)
+
+    let log = logged2
+    for (let i = 0; i < 30; i++) log = withScanLog(log, log, s2)
+    expect(log.recentScans).toHaveLength(20)
   })
 
   it('never includes candidate profile fields', () => {

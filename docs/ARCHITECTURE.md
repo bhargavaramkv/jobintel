@@ -155,3 +155,15 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
 - `src/domain/applications/pipeline.ts`: grouping, due follow-ups, upcoming interviews and `findDuplicate()`
   (normalised company + title among active applications).
 - Manual applications use `manual:<uuid>` ids and a snapshot with `ats: 'manual'`.
+
+## Automation & reminders (Phase 7)
+
+- `collector/run.ts` adds `recentScans` (newest first, max 20) to the feed and writes a Markdown step summary.
+- `scan.yml` has an `alert` job (`if: always()`, `issues: write`) that opens/comments on a single
+  `scan-failure` issue when the scan or deploy fails and closes it after a good run. It uses the runner's `gh`
+  CLI with `GITHUB_TOKEN`; no secrets are added.
+- `src/domain/jobs/schedule.ts` mirrors the cron for the UI. `collector/schedule.test.ts` fails if they drift.
+- `src/domain/reminders/reminders.ts` summarises due items from local records. `ReminderAgent` (mounted in the
+  shell) checks every 15 minutes while the app is open and shows at most one Notification per day when the
+  user turned reminders on and granted permission. localStorage holds only `remindersEnabled` and the last
+  notified date.

@@ -122,6 +122,20 @@
 ### Known limitations
 
 - Resume files aren't stored, only a version label.
-## Phase 7: scheduled automation (scheduled scan done in Phase 2; reminders/notifications not started)
+## Phase 7: scheduled automation & reminders ✅
+
+- [x] Scheduled scans three times a day plus manual dispatch (from Phase 2). A failed scan writes nothing, so the last good feed stays live
+- [x] Scan log: each successful scan prepends a summary (sources OK/failed, open, new, closed) to `recentScans` in the feed (last 20), shown under *Sources* on Job Discovery
+- [x] Run summary on the Actions page (`$GITHUB_STEP_SUMMARY`) listing failed sources
+- [x] Failure alerts: a failed scan or deploy opens (or comments on) one `scan-failure` issue, which notifies the owner; the next good run closes it
+- [x] In-app freshness plus "next scan around …" (from `src/domain/jobs/schedule.ts`; a test keeps it in sync with `scan.yml`)
+- [x] "Today" panel on the dashboard: interviews today, application and outreach follow-ups due
+- [x] Optional browser reminders while the app is open: one notification a day at most, only with permission, stored preference only (no record content in localStorage)
+
+### Known limitations
+
+- Reminders can't fire while the tab is closed; a static site has no background process or push server.
+- The cron stays in UTC (equivalent IST times are documented) rather than the newer `timezone:` key, so an
+  unsupported key can never silently stop the scans.
 ## Phase 8: analytics (not started)
 ## Phase 9: reliability & polish (not started)

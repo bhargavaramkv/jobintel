@@ -3,7 +3,8 @@
  */
 const PREFIX = 'jobintel.ui.'
 
-export type UiPreferenceKey = 'profileSection'
+/** remindersLastDay holds only a date (YYYY-MM-DD), no record content. */
+export type UiPreferenceKey = 'profileSection' | 'remindersEnabled' | 'remindersLastDay'
 
 export function readUiPreference(key: UiPreferenceKey): string | null {
   try {

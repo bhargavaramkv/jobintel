@@ -19,6 +19,7 @@ import {
   type SortKey,
 } from '../../domain/jobs/filters'
 import { isStalePosting, matchJob, matchRank, similarPostings } from '../../domain/match/score'
+import { nextScheduledScan } from '../../domain/jobs/schedule'
 import { useProfile } from '../profile/useProfile'
 import { JobCard } from './JobCard'
 import { useJobActions } from './useJobActions'
@@ -195,7 +196,8 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
           {freshness.kind === 'stale' && ' · the feed may be out of date'}
         </span>
         <span className="mono muted">
-          {openCount} open · {healthy}/{feed.sources.length} sources healthy
+          {openCount} open · {healthy}/{feed.sources.length} sources healthy · next scan around{' '}
+          {nextScheduledScan(now).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
         </span>
         <details className="freshness__sources">
           <summary>Sources</summary>
@@ -226,6 +228,33 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
               ))}
             </tbody>
           </table>
+          {feed.recentScans && feed.recentScans.length > 0 && (
+            <table>
+              <caption className="field__hint">Recent scans (newest first). Failed runs keep the last good feed and are reported in GitHub.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">When</th>
+                  <th scope="col">Sources OK</th>
+                  <th scope="col">Failed</th>
+                  <th scope="col">Open</th>
+                  <th scope="col">New</th>
+                  <th scope="col">Closed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feed.recentScans.map((r) => (
+                  <tr key={r.at}>
+                    <td className="mono">{relativeTime(r.at, now)}</td>
+                    <td className="mono">{r.sourcesOk}</td>
+                    <td className={r.sourcesFailed ? 'err mono' : 'mono'}>{r.sourcesFailed}</td>
+                    <td className="mono">{r.open}</td>
+                    <td className="mono">{r.added}</td>
+                    <td className="mono">{r.closed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </details>
       </section>
 

@@ -258,3 +258,11 @@
   text-decoration: none;
 }
 
+
+.reminders {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

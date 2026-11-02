@@ -461,3 +461,30 @@ describe('Applications (Phase 6)', () => {
     expect(await screen.findByText(/Next: Prepare system design/)).toBeInTheDocument()
   })
 })
+
+describe('Reminders (Phase 7)', () => {
+  it('shows what is due today and only enables browser reminders with permission', async () => {
+    const { jobActionsRepository } = await import('../storage/jobActionsRepository')
+    const { refOf, withDetails, withStage, localDate } = await import('../domain/jobs/actions')
+    const ref = refOf(makeJob({ sourceId: 'rem1', title: 'Platform Engineer' }))
+    const today = localDate()
+    await jobActionsRepository.put(withDetails(withStage(ref, undefined, 'applied'), { followUpOn: today, nextAction: 'Ping recruiter' }))
+    await resetDatabaseConnection()
+
+    const user = userEvent.setup()
+    renderAt('#/')
+    const panel = (await screen.findByRole('heading', { name: 'Today' })).closest('section') as HTMLElement
+    expect(await within(panel).findByText('1 application follow-up due')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Key indicators' })).getByText('Follow-ups').closest('.kpi')).toHaveTextContent('1')
+
+    // jsdom has no Notification API: the toggle explains instead of pretending.
+    await user.click(within(panel).getByRole('button', { name: /Turn on browser reminders/ }))
+    expect(within(panel).getByText(/does not support notifications/)).toBeInTheDocument()
+
+    const granted = { permission: 'granted', requestPermission: async () => 'granted' }
+    Object.defineProperty(window, 'Notification', { value: Object.assign(function () {}, granted), configurable: true })
+    await user.click(within(panel).getByRole('button', { name: /Turn on browser reminders/ }))
+    expect(await within(panel).findByRole('button', { name: /Turn off browser reminders/ })).toHaveAttribute('aria-pressed', 'true')
+    delete (window as unknown as { Notification?: unknown }).Notification
+  })
+})
