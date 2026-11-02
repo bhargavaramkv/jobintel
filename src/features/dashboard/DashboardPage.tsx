@@ -17,6 +17,8 @@ import { useNow } from '../../components/layout/useNow'
 import { applyFilters, DEFAULT_FILTERS, feedFreshness, NEW_WINDOW_DAYS, newJobs, preferencesFromProfile, relativeTime, sortJobs } from '../../domain/jobs/filters'
 import { calculateReadiness } from '../../domain/profile/readiness'
 import { JobCard } from '../jobs/JobCard'
+import { useJobActions } from '../jobs/useJobActions'
+import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
 import { useJobFeed } from '../jobs/jobFeed'
 import { useProfile } from '../profile/useProfile'
 import { greetingFor } from './greeting'
@@ -32,7 +34,6 @@ interface Kpi {
 
 /** Not-yet-built metrics stay at zero with their phase; no number is invented. */
 const PLANNED_KPIS: Kpi[] = [
-  { label: 'Shortlisted', value: 0, icon: Bookmark, hint: 'Available in Phase 3' },
   { label: 'Referral Leads', value: 0, icon: Users, hint: 'Available in Phase 4' },
   { label: 'Follow-ups', value: 0, icon: CalendarClock, hint: 'Available in Phase 5' },
 ]
@@ -46,10 +47,22 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   const { state: feedState } = useJobFeed()
   const feed = feedState.status === 'ready' ? feedState.feed : null
   const prefs = useMemo(() => preferencesFromProfile(profile), [profile])
-  const matching = useMemo(
-    () => (feed ? sortJobs(applyFilters(feed.jobs, DEFAULT_FILTERS, prefs, now), 'newest') : []),
-    [feed, prefs, now],
-  )
+  const { actions, learned } = useJobActions()
+  const targets = useMemo(() => targetLevels(profile?.targetSeniority ?? []), [profile])
+  const ranked = hasSignals(learned, targets)
+  // Jobs still to review: fit preferences, not yet decided, not from a hidden company.
+  // Ranked by what was learned from past decisions, newest first within equal rank.
+  const matching = useMemo(() => {
+    if (!feed) return []
+    const pool = applyFilters(feed.jobs, DEFAULT_FILTERS, prefs, now).filter(
+      (j) => !actions.get(j.id)?.decision && !assessJob(j, learned).hidden,
+    )
+    const newest = sortJobs(pool, 'newest')
+    if (!ranked) return newest
+    const score = new Map(newest.map((j) => [j.id, assessJob(j, learned, targets).score]))
+    return newest.sort((a, b) => score.get(b.id)! - score.get(a.id)!)
+  }, [feed, prefs, now, actions, learned, targets, ranked])
+  const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
   const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
   const freshness = feedFreshness(feed?.lastSuccessfulScanAt, now)
   const kpis: Kpi[] = [
@@ -58,6 +71,12 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
       value: feed ? fresh.length : feedState.status === 'loading' ? null : 0,
       icon: Radar,
       hint: feed ? `First seen in the last ${NEW_WINDOW_DAYS} days`+ (prefs.active ? ' · your preferences' : '') : 'Waiting for the first scan',
+    },
+    {
+      label: 'Applied',
+      value: appliedCount,
+      icon: Bookmark,
+      hint: appliedCount ? 'Marked by you in this browser' : 'Mark jobs as applied to count them',
     },
     ...PLANNED_KPIS,
   ]
@@ -127,7 +146,11 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
                 Job Feed
               </h2>
               <p className="panel__subtitle">
-                {prefs.active ? 'Newest openings that fit your location and work preferences' : 'Newest openings in India'}
+                {ranked
+                  ? 'Ranked by your target seniority and applied / not-interested history'
+                  : prefs.active
+                    ? 'Newest openings that fit your location and work preferences'
+                    : 'Newest openings'}
               </p>
             </div>
             <span className="badge">{matching.length} jobs</span>
@@ -135,10 +158,17 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
           {matching.length > 0 ? (
             <div className="panel__body feed__list">
               {matching.slice(0, 5).map((j) => (
-                <JobCard key={j.id} job={j} now={now} isNew={fresh.some((f) => f.id === j.id)} />
+                <JobCard
+                  key={j.id}
+                  job={j}
+                  record={actions.get(j.id)}
+                  now={now}
+                  isNew={fresh.some((f) => f.id === j.id)}
+                  assessment={ranked ? assessJob(j, learned, targets) : undefined}
+                />
               ))}
               <Link to="/jobs" className="btn btn--secondary feed__all">
-                View all {matching.length} in Job Discovery
+                Review all {matching.length} in Job Discovery
                 <ArrowRight size={16} aria-hidden="true" />
               </Link>
             </div>

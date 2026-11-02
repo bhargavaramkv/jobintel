@@ -45,6 +45,31 @@ describe('profileRepository', () => {
     const db = await openDatabase()
     expect(db.name).toBe(DB_NAME)
     expect(db.version).toBe(DB_VERSION)
-    expect([...db.objectStoreNames].sort()).toEqual([STORES.meta, STORES.profile].sort())
+    expect([...db.objectStoreNames].sort()).toEqual([STORES.jobActions, STORES.meta, STORES.profile].sort())
+  })
+
+  it('upgrades an existing v1 database without losing the profile', async () => {
+    const p = completeProfile()
+    // Build a v1 database exactly as Phase 1 shipped it.
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1)
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore('profile', { keyPath: 'id' })
+        req.result.createObjectStore('meta', { keyPath: 'key' }).put({ key: 'schemaVersion', value: 1 })
+      }
+      req.onsuccess = () => {
+        const tx = req.result.transaction('profile', 'readwrite')
+        tx.objectStore('profile').put(p)
+        tx.oncomplete = () => {
+          req.result.close()
+          resolve()
+        }
+      }
+      req.onerror = () => reject(req.error)
+    })
+    expect(await profileRepository.get()).toEqual(p)
+    expect(await profileRepository.getSchemaVersion()).toBe(SCHEMA_VERSION)
+    const { jobActionsRepository } = await import('./jobActionsRepository')
+    expect((await jobActionsRepository.getAll()).actions).toEqual([])
   })
 })

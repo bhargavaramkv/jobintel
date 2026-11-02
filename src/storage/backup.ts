@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { jobActionSchema, type JobAction } from '../domain/jobs/actions'
 import { candidateProfileSchema, type CandidateProfile } from '../domain/profile/schema'
 import { SCHEMA_VERSION } from './constants'
 
@@ -48,6 +49,8 @@ const payloadSchema = z
     schemaVersion: z.number().int(),
     exportedAt: z.string(),
     profile: candidateProfileSchema.nullable(),
+    /** Added in data schema 2. Older backups have none. */
+    jobActions: z.array(jobActionSchema).default([]),
   })
   .strict()
 
@@ -121,7 +124,7 @@ export function checkPassphrase(passphrase: string): string | null {
 export async function createBackup(
   profile: CandidateProfile | null,
   passphrase: string,
-  options: { iterations?: number; now?: Date } = {},
+  options: { iterations?: number; now?: Date; jobActions?: JobAction[] } = {},
 ): Promise<BackupEnvelope> {
   const weak = checkPassphrase(passphrase)
   if (weak) throw new BackupError('weak-passphrase', weak)
@@ -131,7 +134,7 @@ export async function createBackup(
   const salt = c.getRandomValues(new Uint8Array(SALT_BYTES))
   const iv = c.getRandomValues(new Uint8Array(IV_BYTES))
   const key = await deriveKey(passphrase, salt, iterations)
-  const payload: BackupPayload = { schemaVersion: SCHEMA_VERSION, exportedAt: now, profile }
+  const payload: BackupPayload = { schemaVersion: SCHEMA_VERSION, exportedAt: now, profile, jobActions: options.jobActions ?? [] }
   const ciphertext = new Uint8Array(
     await c.subtle.encrypt(
       { name: 'AES-GCM', iv },

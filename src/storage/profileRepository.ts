@@ -46,8 +46,9 @@ export const profileRepository = {
   /** Remove every JobIntel record from this browser's IndexedDB. */
   async clearAll(): Promise<void> {
     const db = await openDatabase()
-    const tx = db.transaction([STORES.profile, STORES.meta], 'readwrite')
+    const tx = db.transaction([STORES.profile, STORES.meta, STORES.jobActions], 'readwrite')
     tx.objectStore(STORES.profile).clear()
+    tx.objectStore(STORES.jobActions).clear()
     tx.objectStore(STORES.meta).clear()
     tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: SCHEMA_VERSION })
     await transactionDone(tx)

@@ -101,6 +101,17 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
   appear under `data/`. The app's profile filter (locations, work modes, excluded titles) runs
   only in the browser.
 
+## Decisions and learning
+
+- IndexedDB **v2** adds the `jobActions` store, keyed by `jobId`. Each record holds the decision
+  (`applied` / `rejected`), the applied date, reject reasons, a note, and a snapshot of the job
+  (title, company, URL, cities), so the record survives after the posting leaves the feed.
+- `src/domain/jobs/feedback.ts` holds `learnFromActions()`, which produces explainable rules,
+  and `assessJob()`, which produces a score with reasons. It is pure, deterministic and has no
+  network access. The sort *Recommended for you* is score descending, then newest first.
+- Learning happens at read time in the browser, so each new public feed is ranked with the latest
+  decisions without ever publishing them.
+
 ## Future phases (not implemented)
 
 Phase 3 will rank feed jobs against the local profile in the browser, with explained scores. See `IMPLEMENTATION_PLAN.md` §2.3 and §7.
