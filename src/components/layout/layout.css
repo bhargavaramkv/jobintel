@@ -341,8 +341,14 @@ a.rail__link:hover {
 
   .rail__list {
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between;
+    width: 100%;
     padding: 0;
+  }
+
+  .rail__item {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .rail__item--end {
@@ -350,13 +356,19 @@ a.rail__link:hover {
   }
 
   .rail__link {
-    width: 88px;
+    width: 100%;
+    max-width: 88px;
     height: 48px;
+    margin: 0 auto;
+  }
+
+  .rail__label {
+    font-size: 0.625rem;
   }
 
   .rail__link.is-active::before {
-    left: 28px;
-    right: 28px;
+    left: 30%;
+    right: 30%;
     top: -6px;
     bottom: auto;
     width: auto;

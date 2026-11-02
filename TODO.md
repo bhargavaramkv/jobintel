@@ -137,5 +137,15 @@
 - Reminders can't fire while the tab is closed; a static site has no background process or push server.
 - The cron stays in UTC (equivalent IST times are documented) rather than the newer `timezone:` key, so an
   unsupported key can never silently stop the scans.
-## Phase 8: analytics (not started)
+## Phase 8: analytics ✅
+
+- [x] Analytics page (`#/analytics`), computed in the browser from your records only; no benchmarks
+- [x] Funnel from status history: open jobs → shortlisted/applied → applied → company responded → interviewed → offer, with step conversion
+- [x] Referrals & outreach: messages sent, people contacted, replies, recruiter replies, referral requests, confirmed referrals, reply rate
+- [x] By-company table (applied, responded, interviews, offers, rejections, response rate with n)
+- [x] Time to response (median days from applied to first company response) and applications still waiting
+- [x] Repeated skill gaps across relevant jobs (pipeline + open jobs with at least a partial fit)
+- [x] Recommendations, each with its evidence and records; group comparisons are labelled "Correlation", not cause; small-sample warnings below 5 applications
+- [x] Every number expands to the records behind it; CSV export only on request
+- [x] Mobile bottom navigation fits all seven areas
 ## Phase 9: reliability & polish (not started)

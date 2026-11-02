@@ -32,14 +32,13 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('link', { name: /Complete profile/ })).toBeInTheDocument()
   })
 
-  it('marks planned areas as unavailable rather than linking to them', async () => {
+  it('links every area from the primary navigation', async () => {
     renderAt('#/')
     const nav = await screen.findByRole('navigation', { name: 'Primary' })
-    expect(within(nav).getByText(/Analytics, planned for Phase 8/)).toBeInTheDocument()
-    expect(within(nav).queryByRole('link', { name: /Analytics/ })).toBeNull()
-    expect(within(nav).getByRole('link', { name: 'Referrals' })).toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: 'Job Discovery' })).toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+    for (const name of ['Dashboard', 'Job Discovery', 'Referrals', 'Outreach', 'Applications', 'Analytics', 'Profile & Preferences']) {
+      expect(within(nav).getByRole('link', { name })).toBeInTheDocument()
+    }
+    expect(within(nav).queryByText(/planned for Phase/)).toBeNull()
   })
 
   it('greets by display name and shows 100% when the profile is complete', async () => {
@@ -486,5 +485,32 @@ describe('Reminders (Phase 7)', () => {
     await user.click(within(panel).getByRole('button', { name: /Turn on browser reminders/ }))
     expect(await within(panel).findByRole('button', { name: /Turn off browser reminders/ })).toHaveAttribute('aria-pressed', 'true')
     delete (window as unknown as { Notification?: unknown }).Notification
+  })
+})
+
+describe('Analytics (Phase 8)', () => {
+  it('shows an honest empty state, then traceable metrics with small-sample warnings', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderAt('#/analytics')
+    expect(await screen.findByText('No records to analyse yet')).toBeInTheDocument()
+    unmount()
+
+    const { jobActionsRepository } = await import('../storage/jobActionsRepository')
+    const { refOf, withStage } = await import('../domain/jobs/actions')
+    const ref = refOf(makeJob({ sourceId: 'an1', title: 'Backend Engineer', company: 'Acme Corp' }))
+    let a = withStage(ref, undefined, 'applied', new Date('2026-10-01T10:00:00Z'))
+    a = withStage(ref, a, 'interview', new Date('2026-10-08T10:00:00Z'))
+    await jobActionsRepository.put(a)
+    await resetDatabaseConnection()
+
+    renderAt('#/analytics')
+    expect(await screen.findByText(/Small sample: 1 application/)).toBeInTheDocument()
+    const funnel = screen.getByRole('region', { name: 'Application funnel' })
+    const interviewed = within(funnel).getByText('Interviewed').closest('li') as HTMLElement
+    expect(interviewed).toHaveTextContent('1')
+    await user.click(within(interviewed).getByText('1 record'))
+    expect(within(interviewed).getByText('Backend Engineer · Acme Corp')).toBeInTheDocument()
+    expect(screen.getByText(/days median/)).toHaveTextContent('7 days median')
+    expect(screen.getByRole('rowheader', { name: 'Acme Corp' })).toBeInTheDocument()
   })
 })

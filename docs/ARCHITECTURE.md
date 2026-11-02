@@ -167,3 +167,11 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
   shell) checks every 15 minutes while the app is open and shows at most one Notification per day when the
   user turned reminders on and granted permission. localStorage holds only `remindersEnabled` and the last
   notified date.
+
+## Analytics (Phase 8)
+
+- `src/domain/analytics/analytics.ts` is pure: `funnel`, `outreachStats`, `byCompany`, `responseTimes`,
+  `skillGaps`, `recommendations` and `applicationsCsv`. Each metric returns the ids of its records.
+- "Reached a stage" uses the status history plus the current stage, so later changes never erase earlier
+  progress. Legacy applied records without history count as Applied.
+- Charts are plain HTML/CSS (single-series bars in the accent colour with direct value labels); no chart library.
