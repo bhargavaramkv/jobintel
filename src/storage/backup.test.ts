@@ -121,3 +121,31 @@ describe('encrypted backup', () => {
     await expectCode(decryptBackup(forged, PASS), 'unsupported-version')
   })
 })
+
+describe('backup with job decisions (data schema 2)', () => {
+  it('round-trips applied/rejected records and notes', async () => {
+    const { refOf, withApplied, withNote } = await import('../domain/jobs/actions')
+    const { makeJob } = await import('../test/feedFixture')
+    const ref = refOf(makeJob({ sourceId: 'k1', title: 'Software Engineer 2', company: 'Example Co' }))
+    const action = withNote(ref, withApplied(ref, undefined, new Date('2026-11-02T10:00:00Z')), 'Applied via careers page')
+    const env = await createBackup(completeProfile(), PASS, { ...FAST, jobActions: [action] })
+    const restored = await restoreFromText(JSON.stringify(env), PASS)
+    expect(restored.jobActions).toEqual([action])
+  })
+
+  it('still restores older backups that have no job decisions', async () => {
+    const subtle = globalThis.crypto.subtle
+    const salt = crypto.getRandomValues(new Uint8Array(16))
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+    const material = await subtle.importKey('raw', new TextEncoder().encode(PASS), 'PBKDF2', false, ['deriveKey'])
+    const key = await subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 100_000 }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt'])
+    const v1 = new TextEncoder().encode(JSON.stringify({ schemaVersion: 1, exportedAt: 'x', profile: completeProfile() }))
+    const ct = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, key, v1))
+    const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))
+    const env = await createBackup(null, PASS, FAST)
+    const old = { ...env, kdf: { ...env.kdf, salt: b64(salt) }, cipher: { ...env.cipher, iv: b64(iv) }, ciphertext: b64(ct) }
+    const restored = await decryptBackup(old, PASS)
+    expect(restored.profile).toEqual(completeProfile())
+    expect(restored.jobActions).toEqual([])
+  })
+})
