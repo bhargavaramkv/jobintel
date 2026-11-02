@@ -32,7 +32,7 @@ await Promise.all(
         if (loc.cities.includes('Bengaluru')) blr++
         if (loc.cities.includes('Hyderabad')) hyd++
       }
-      rows.push(`${india > 0 ? 'OK ' : '-- '} ${arg.padEnd(32)} total=${raw.length} indiaEng=${india} blr=${blr} hyd=${hyd}`)
+      rows.push(`${blr + hyd > 0 ? 'OK ' : '-- '} ${arg.padEnd(32)} total=${raw.length} indiaEng=${india} blr=${blr} hyd=${hyd}`)
     } catch (err) {
       rows.push(`ERR ${arg.padEnd(32)} ${err instanceof Error ? err.message : err}`)
     }

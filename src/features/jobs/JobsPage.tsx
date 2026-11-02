@@ -81,6 +81,15 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
     setLimit(PAGE)
   }
 
+  // Offer only the cities the feed was collected for (else those that occur in it).
+  const cityOptions = useMemo(
+    () =>
+      feed.cityScope?.length
+        ? CITY_ORDER.filter((c) => feed.cityScope!.includes(c))
+        : CITY_ORDER.filter((c) => feed.jobs.some((j) => j.cities.includes(c))),
+    [feed],
+  )
+  const hasRemoteIndia = useMemo(() => feed.jobs.some((j) => j.remoteIndia), [feed])
   const companies = useMemo(() => [...new Set(feed.jobs.map((j) => j.company))].sort((a, b) => a.localeCompare(b)), [feed])
   const results = useMemo(() => sortJobs(applyFilters(feed.jobs, filters, prefs, now), sort), [feed, filters, prefs, now, sort])
   const newIds = useMemo(() => new Set(newJobs(feed.jobs, NEW_WINDOW_DAYS, now).map((j) => j.id)), [feed, now])
@@ -196,16 +205,18 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
         </p>
 
         <div className="filters__row filters__chips" role="group" aria-label="City">
-          {CITY_ORDER.map((c) => (
+          {cityOptions.map((c) => (
             <label key={c} className="choice">
               <input type="checkbox" checked={filters.cities.includes(c)} onChange={() => toggleCity(c)} />
               <span>{c}</span>
             </label>
           ))}
+          {hasRemoteIndia && (
           <label className="choice">
             <input type="checkbox" checked={filters.remoteIndiaOnly} onChange={(e) => set('remoteIndiaOnly', e.target.checked)} />
             <span>Remote (India)</span>
           </label>
+          )}
         </div>
 
         <div className="filters__row filters__selects">
