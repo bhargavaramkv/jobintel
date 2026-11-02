@@ -1,4 +1,5 @@
 import { useId, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useDialogFocus } from './useDialogFocus'
 
 interface DialogProps {
@@ -18,7 +19,8 @@ export function Dialog({ open, title, onClose, children, footer, busy = false, r
   useDialogFocus(open, ref)
   if (!open) return null
 
-  return (
+  // Portal to <body> so a dialog's own <form> is never nested inside a page form.
+  return createPortal(
     <div
       className="overlay"
       onMouseDown={(e) => {
@@ -46,6 +48,7 @@ export function Dialog({ open, title, onClose, children, footer, busy = false, r
         <div className="dialog__body">{children}</div>
         <div className="dialog__footer">{footer}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

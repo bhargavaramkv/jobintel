@@ -246,6 +246,15 @@ function ProfileEditor({ stored, loadError, save, dataNotice, setDataNotice }: E
           </ul>
         </nav>
 
+        {section === 'data' ? (
+          // Not inside the profile <form>: the backup dialogs contain their own forms,
+          // and nested forms do not submit reliably in browsers.
+          <div className="panel profile__form">
+            <div className="panel__body">
+              <DataPrivacySection dirty={dirty} notice={dataNotice} setNotice={setDataNotice} />
+            </div>
+          </div>
+        ) : (
         <form
           className="panel profile__form"
           noValidate
@@ -261,10 +270,8 @@ function ProfileEditor({ stored, loadError, save, dataNotice, setDataNotice }: E
             {section === 'roles' && <RolesSection {...sectionProps} />}
             {section === 'location' && <LocationSection {...sectionProps} />}
             {section === 'company' && <CompanySection {...sectionProps} />}
-            {section === 'data' && <DataPrivacySection dirty={dirty} notice={dataNotice} setNotice={setDataNotice} />}
           </div>
 
-          {section !== 'data' && (
             <div className="savebar">
               <SaveStatus state={saveState} dirty={dirty} />
               <div className="savebar__actions">
@@ -282,8 +289,8 @@ function ProfileEditor({ stored, loadError, save, dataNotice, setDataNotice }: E
                 </button>
               </div>
             </div>
-          )}
         </form>
+        )}
       </div>
 
       <Dialog
