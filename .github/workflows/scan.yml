@@ -1,0 +1,64 @@
+name: Job discovery scan
+
+# Collects public job postings, commits the refreshed feed, then rebuilds and deploys Pages.
+# Schedules are best-effort: GitHub may delay them under load, they run from the default
+# branch, and they stop after 60 days without repository activity on public repos.
+on:
+  schedule:
+    # 07:43, 13:43 and 19:43 IST (UTC+5:30). Off the hour to avoid peak scheduling load.
+    - cron: '13 2,8,14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: job-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Collect jobs
+        # Exits non-zero (and writes nothing) only if every source fails,
+        # so the previously published feed stays live.
+        run: node collector/run.ts
+      - name: Commit feed if changed
+        id: commit
+        run: |
+          if git diff --quiet -- public/data/jobs.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Feed unchanged."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/data/jobs.json
+            git commit -m "chore(feed): job scan $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push origin HEAD:main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: scan
+    if: needs.scan.outputs.changed == 'true'
+    # A push made with GITHUB_TOKEN does not trigger other workflows, so deploy here.
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: main
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
