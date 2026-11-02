@@ -3,8 +3,9 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.1, Phase 1 (app shell + local candidate profile). Job discovery, matching, referrals,
-outreach, application tracking and analytics are planned. They are **not** implemented yet. See
+**Status:** v0.1. Phase 1 (app shell + local candidate profile) and Phase 2 (job discovery) are done.
+Matching, referrals, outreach, application tracking and analytics are planned. They are **not**
+implemented yet. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -36,6 +37,18 @@ outreach, application tracking and analytics are planned. They are **not** imple
   [`src/domain/profile/readiness.ts`](src/domain/profile/readiness.ts).
 - Encrypted export and import of backups, and a clear-local-data action that requires typed
   confirmation.
+
+## Job discovery (Phase 2)
+
+`collector/` runs in GitHub Actions three times a day. It reads the public posting APIs of the
+boards in [`collector/sources.json`](collector/sources.json) (Greenhouse, Lever, Ashby), keeps
+India-based engineering roles, and writes `public/data/jobs.json`. The app fetches that static
+file from the same origin and filters it in the browser. Your profile is never sent anywhere, and
+the feed contains only public posting facts. Note that the list of tracked companies is public.
+
+- Run a scan locally: `node collector/run.ts` (Node 24+)
+- Check a board before adding it: `node collector/probe.ts greenhouse:<board> lever:<site> ashby:<name>`
+- Run a scan from GitHub: Actions → *Job discovery scan* → *Run workflow*
 
 ## Development
 
