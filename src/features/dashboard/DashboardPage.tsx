@@ -11,9 +11,13 @@ import {
   Users,
   CalendarClock,
 } from 'lucide-react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useNow } from '../../components/layout/useNow'
+import { applyFilters, DEFAULT_FILTERS, feedFreshness, NEW_WINDOW_DAYS, newJobs, preferencesFromProfile, relativeTime, sortJobs } from '../../domain/jobs/filters'
 import { calculateReadiness } from '../../domain/profile/readiness'
+import { JobCard } from '../jobs/JobCard'
+import { useJobFeed } from '../jobs/jobFeed'
 import { useProfile } from '../profile/useProfile'
 import { greetingFor } from './greeting'
 import { ROADMAP } from './roadmap'
@@ -21,17 +25,16 @@ import './dashboard.css'
 
 interface Kpi {
   label: string
-  value: number
+  value: number | null
   icon: LucideIcon
-  phase: number
+  hint: string
 }
 
-/** All zero in Phase 1: no feature backs these yet, so no number is invented. */
-const KPIS: Kpi[] = [
-  { label: 'New Jobs', value: 0, icon: Radar, phase: 2 },
-  { label: 'Shortlisted', value: 0, icon: Bookmark, phase: 3 },
-  { label: 'Referral Leads', value: 0, icon: Users, phase: 4 },
-  { label: 'Follow-ups', value: 0, icon: CalendarClock, phase: 5 },
+/** Not-yet-built metrics stay at zero with their phase; no number is invented. */
+const PLANNED_KPIS: Kpi[] = [
+  { label: 'Shortlisted', value: 0, icon: Bookmark, hint: 'Available in Phase 3' },
+  { label: 'Referral Leads', value: 0, icon: Users, hint: 'Available in Phase 4' },
+  { label: 'Follow-ups', value: 0, icon: CalendarClock, hint: 'Available in Phase 5' },
 ]
 
 export function DashboardPage({ now: nowOverride }: { now?: Date }) {
@@ -40,6 +43,24 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   const readiness = calculateReadiness(profile)
   const name = profile?.displayName?.split(/\s+/)[0]
   const loading = state.status === 'loading'
+  const { state: feedState } = useJobFeed()
+  const feed = feedState.status === 'ready' ? feedState.feed : null
+  const prefs = useMemo(() => preferencesFromProfile(profile), [profile])
+  const matching = useMemo(
+    () => (feed ? sortJobs(applyFilters(feed.jobs, DEFAULT_FILTERS, prefs, now), 'newest') : []),
+    [feed, prefs, now],
+  )
+  const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
+  const freshness = feedFreshness(feed?.lastSuccessfulScanAt, now)
+  const kpis: Kpi[] = [
+    {
+      label: 'New Jobs',
+      value: feed ? fresh.length : feedState.status === 'loading' ? null : 0,
+      icon: Radar,
+      hint: feed ? `First seen in the last ${NEW_WINDOW_DAYS} days`+ (prefs.active ? ' · your preferences' : '') : 'Waiting for the first scan',
+    },
+    ...PLANNED_KPIS,
+  ]
 
   return (
     <div className="dashboard">
@@ -53,10 +74,17 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
           <p className="hero__subtitle">Your job hunt command center</p>
         </div>
         <div className="hero__actions">
-          <span className="badge badge--warning">
-            <span className="dot" aria-hidden="true" />
-            Discovery not configured · Phase 2 pending
-          </span>
+          {freshness.kind === 'none' ? (
+            <span className="badge badge--warning">
+              <span className="dot" aria-hidden="true" />
+              {feedState.status === 'loading' ? 'Loading job feed…' : 'Waiting for the first discovery scan'}
+            </span>
+          ) : (
+            <span className={freshness.kind === 'stale' ? 'badge badge--warning' : 'badge badge--success'}>
+              <span className="dot" aria-hidden="true" />
+              Discovery {freshness.kind === 'stale' ? 'feed is stale' : 'active'} · last scan {relativeTime(freshness.at, now)}
+            </span>
+          )}
           {!loading && (
             <Link to="/profile" className="btn btn--primary">
               {readiness.complete ? 'Edit profile' : 'Complete profile'}
@@ -76,7 +104,7 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
       )}
 
       <section aria-label="Key indicators" className="kpis">
-        {KPIS.map((k) => {
+        {kpis.map((k) => {
           const Icon = k.icon
           return (
             <div key={k.label} className="kpi">
@@ -84,8 +112,8 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
                 <span className="kpi__label">{k.label}</span>
                 <Icon size={16} aria-hidden="true" className="kpi__icon" />
               </div>
-              <span className="kpi__value">{k.value}</span>
-              <span className="kpi__hint mono">Available in Phase {k.phase}</span>
+              <span className="kpi__value">{k.value ?? '–'}</span>
+              <span className="kpi__hint mono">{k.hint}</span>
             </div>
           )
         })}
@@ -98,21 +126,42 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
               <h2 id="feed-title" className="panel__title">
                 Job Feed
               </h2>
-              <p className="panel__subtitle">Opportunities matched to your profile</p>
+              <p className="panel__subtitle">
+                {prefs.active ? 'Newest openings that fit your location and work preferences' : 'Newest openings in India'}
+              </p>
             </div>
-            <span className="badge">0 jobs</span>
+            <span className="badge">{matching.length} jobs</span>
           </div>
-          <div className="empty">
-            <RadarGraphic />
-            <h3 className="empty__title">Your job feed is not connected yet</h3>
-            <p className="empty__text">
-              Job discovery will be enabled in Phase 2. Complete your profile now so future matches can be ranked
-              against your experience.
-            </p>
-            <Link to="/profile" className="btn btn--secondary">
-              Set up candidate profile
-            </Link>
-          </div>
+          {matching.length > 0 ? (
+            <div className="panel__body feed__list">
+              {matching.slice(0, 5).map((j) => (
+                <JobCard key={j.id} job={j} now={now} isNew={fresh.some((f) => f.id === j.id)} />
+              ))}
+              <Link to="/jobs" className="btn btn--secondary feed__all">
+                View all {matching.length} in Job Discovery
+                <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+          ) : (
+            <div className="empty">
+              <RadarGraphic />
+              <h3 className="empty__title">
+                {feedState.status === 'loading'
+                  ? 'Loading the job feed…'
+                  : feed
+                    ? 'No open jobs fit your preferences right now'
+                    : 'No discovery scan has run yet'}
+              </h3>
+              <p className="empty__text">
+                {feed
+                  ? 'New openings are collected a few times a day. Widen your locations or work modes to see more.'
+                  : 'Jobs appear after the scheduled collector publishes its first feed.'}
+              </p>
+              <Link to={feed ? '/jobs' : '/profile'} className="btn btn--secondary">
+                {feed ? 'Browse all jobs' : 'Review candidate profile'}
+              </Link>
+            </div>
+          )}
         </section>
 
         <aside className="rail-col" aria-label="Setup and milestones">
@@ -190,8 +239,8 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
             </div>
             <div className="panel__body milestone">
               <p>
-                <strong>Phase 2 · Job discovery.</strong> Scheduled GitHub Actions will collect public openings from
-                Greenhouse, Lever and Ashby boards into a static feed. Matching then happens in this browser.
+                <strong>Phase 3 · Matching engine.</strong> Rank discovered jobs against your profile in this browser, with
+                an explained score of matched and missing skills, plus shortlist and hide.
               </p>
               <ol className="roadmap">
                 {ROADMAP.map((r) => (

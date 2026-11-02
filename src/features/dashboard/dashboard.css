@@ -246,3 +246,15 @@
     font-size: var(--text-xl);
   }
 }
+
+.feed__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feed__all {
+  align-self: flex-start;
+  text-decoration: none;
+}
+

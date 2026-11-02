@@ -2,7 +2,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { profileRepository } from '../storage/profileRepository'
-import { completeProfile, freshDatabase } from '../test/helpers'
+import { completeProfile, freshDatabase, makeProfile } from '../test/helpers'
+import { makeFeed, makeJob, mockFetchFeed } from '../test/feedFixture'
 import { resetDatabaseConnection } from '../storage/db'
 import { App } from './App'
 
@@ -14,12 +15,13 @@ function renderAt(hash: string) {
 beforeEach(async () => {
   await freshDatabase()
   localStorage.clear()
+  globalThis.fetch = mockFetchFeed(null) // no scan published yet
 })
 
 describe('Dashboard', () => {
   it('shows honest empty states and zero indicators', async () => {
     renderAt('#/')
-    expect(await screen.findByText('Your job feed is not connected yet')).toBeInTheDocument()
+    expect(await screen.findByText('No discovery scan has run yet')).toBeInTheDocument()
     const kpis = screen.getByRole('region', { name: 'Key indicators' })
     for (const label of ['New Jobs', 'Shortlisted', 'Referral Leads', 'Follow-ups']) {
       expect(within(kpis).getByText(label)).toBeInTheDocument()
@@ -33,8 +35,9 @@ describe('Dashboard', () => {
   it('marks planned areas as unavailable rather than linking to them', async () => {
     renderAt('#/')
     const nav = await screen.findByRole('navigation', { name: 'Primary' })
-    expect(within(nav).getByText(/Job Discovery, planned for Phase 2/)).toBeInTheDocument()
-    expect(within(nav).queryByRole('link', { name: /Job Discovery/ })).toBeNull()
+    expect(within(nav).getByText(/Referrals, planned for Phase 4/)).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: /Referrals/ })).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Job Discovery' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
@@ -132,10 +135,65 @@ describe('Command palette', () => {
   it('opens with Ctrl+K and navigates to the profile', async () => {
     const user = userEvent.setup()
     renderAt('#/')
-    await screen.findByText('Your job feed is not connected yet')
+    await screen.findByText('No discovery scan has run yet')
     await user.keyboard('{Control>}k{/Control}')
     const input = await screen.findByRole('combobox', { name: 'Search commands' })
     await user.type(input, 'backup{Enter}')
     expect(await screen.findByRole('heading', { name: 'Data & privacy' })).toBeInTheDocument()
+  })
+})
+
+describe('Job Discovery', () => {
+  const now = new Date()
+  const iso = (hoursAgo: number) => new Date(now.getTime() - hoursAgo * 3_600_000).toISOString()
+  const feed = makeFeed(
+    [
+      makeJob({ sourceId: 'b1', title: 'Backend Engineer', firstSeenAt: iso(2) }),
+      makeJob({ sourceId: 'h1', title: 'Full-Stack Engineer', company: 'Hydro Labs', cities: ['Hyderabad'], locations: ['Hyderabad'], workMode: 'hybrid', firstSeenAt: iso(5) }),
+      makeJob({ sourceId: 'p1', title: 'Platform Engineer', cities: ['Pune'], locations: ['Pune'], firstSeenAt: iso(1) }),
+      makeJob({ sourceId: 'c1', title: 'Closed Role Engineer', status: 'closed', closedAt: iso(1) }),
+    ],
+    iso(1),
+  )
+
+  beforeEach(async () => {
+    globalThis.fetch = mockFetchFeed(feed)
+    await profileRepository.save(makeProfile({ preferredLocations: ['Bengaluru', 'Hyderabad'], workModes: ['onsite', 'hybrid', 'remote'] }))
+    await resetDatabaseConnection()
+  })
+
+  it('lists open jobs that fit profile preferences, with original links', async () => {
+    renderAt('#/jobs')
+    expect(await screen.findByRole('link', { name: /Backend Engineer/ })).toHaveAttribute('href', 'https://example.com/jobs/b1')
+    expect(screen.getByRole('link', { name: /Backend Engineer/ })).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.getByRole('link', { name: /Full-Stack Engineer/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Platform Engineer/ })).toBeNull() // Pune not preferred
+    expect(screen.queryByRole('link', { name: /Closed Role/ })).toBeNull()
+    expect(screen.getByTestId('result-count')).toHaveTextContent('Showing 2 of 2')
+  })
+
+  it('can turn off profile preferences, search, and show details', async () => {
+    const user = userEvent.setup()
+    renderAt('#/jobs')
+    await user.click(await screen.findByRole('switch', { name: 'Use my profile preferences' }))
+    expect(screen.getByRole('link', { name: /Platform Engineer/ })).toBeInTheDocument()
+    await user.type(screen.getByRole('searchbox', { name: 'Search jobs' }), 'hydro')
+    expect(screen.getByTestId('result-count')).toHaveTextContent('Showing 1 of 1')
+    await user.click(screen.getByRole('button', { name: /Details/ }))
+    expect(screen.getByText('3+ years C#')).toBeInTheDocument()
+  })
+
+  it('shows real new-job counts and jobs on the dashboard', async () => {
+    renderAt('#/')
+    const kpis = await screen.findByRole('region', { name: 'Key indicators' })
+    await waitFor(() => expect(within(kpis).getByText('New Jobs').closest('.kpi')).toHaveTextContent('2'))
+    expect(screen.getByText(/Discovery active/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /View all 2 in Job Discovery/ })).toBeInTheDocument()
+  })
+
+  it('explains an empty feed honestly', async () => {
+    globalThis.fetch = mockFetchFeed(null)
+    renderAt('#/jobs')
+    expect(await screen.findByText('No scan has run yet')).toBeInTheDocument()
   })
 })
