@@ -1,9 +1,11 @@
-import { CircleAlert, CircleCheck, Loader2, Radar, RefreshCw, RotateCcw, Search, TriangleAlert } from 'lucide-react'
+import { CircleAlert, CircleCheck, Eye, Loader2, Radar, RefreshCw, RotateCcw, Search, Sparkles, TriangleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNow } from '../../components/layout/useNow'
 import { CITY_ORDER } from '../../domain/jobs/cities'
-import { ATS_LABEL, type City, type JobFeed, type JobWorkMode } from '../../domain/jobs/feedSchema'
+import type { JobAction } from '../../domain/jobs/actions'
+import { assessJob, describeLearning, hasSignals, targetLevels } from '../../domain/jobs/feedback'
+import { ATS_LABEL, type City, type Job, type JobFeed, type JobWorkMode } from '../../domain/jobs/feedSchema'
 import {
   applyFilters,
   DEFAULT_FILTERS,
@@ -18,6 +20,7 @@ import {
 } from '../../domain/jobs/filters'
 import { useProfile } from '../profile/useProfile'
 import { JobCard } from './JobCard'
+import { useJobActions } from './useJobActions'
 import { useJobFeed } from './jobFeed'
 import './jobs.css'
 
@@ -69,19 +72,26 @@ export function JobsPage({ now: nowOverride }: { now?: Date }) {
   )
 }
 
+type View = 'review' | 'applied' | 'rejected' | 'all'
+
 function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
   const { profile } = useProfile()
+  const { actions, learned, unhideCompany } = useJobActions()
   const prefs = useMemo(() => preferencesFromProfile(profile), [profile])
+  const targets = useMemo(() => targetLevels(profile?.targetSeniority ?? []), [profile])
   const [filters, setFilters] = useState<JobFilters>(DEFAULT_FILTERS)
-  const [sort, setSort] = useState<SortKey>('newest')
+  const [view, setView] = useState<View>('review')
+  const [sortChoice, setSortChoice] = useState<SortKey | 'recommended' | null>(null)
+  const [showHidden, setShowHidden] = useState(false)
   const [limit, setLimit] = useState(PAGE)
+  // Default to the learned ranking once there is something to learn from.
+  const sort = sortChoice ?? (hasSignals(learned, targets) ? 'recommended' : 'newest')
 
   const set = <K extends keyof JobFilters>(key: K, value: JobFilters[K]) => {
     setFilters((f) => ({ ...f, [key]: value }))
     setLimit(PAGE)
   }
 
-  // Offer only the cities the feed was collected for (else those that occur in it).
   const cityOptions = useMemo(
     () =>
       feed.cityScope?.length
@@ -91,13 +101,53 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
   )
   const hasRemoteIndia = useMemo(() => feed.jobs.some((j) => j.remoteIndia), [feed])
   const companies = useMemo(() => [...new Set(feed.jobs.map((j) => j.company))].sort((a, b) => a.localeCompare(b)), [feed])
-  const results = useMemo(() => sortJobs(applyFilters(feed.jobs, filters, prefs, now), sort), [feed, filters, prefs, now, sort])
+  const jobsById = useMemo(() => new Map(feed.jobs.map((j) => [j.id, j])), [feed])
   const newIds = useMemo(() => new Set(newJobs(feed.jobs, NEW_WINDOW_DAYS, now).map((j) => j.id)), [feed, now])
+
+  const filtered = useMemo(() => applyFilters(feed.jobs, filters, prefs, now), [feed, filters, prefs, now])
+  const assessed = useMemo(() => new Map(filtered.map((j) => [j.id, assessJob(j, learned, targets)])), [filtered, learned, targets])
+
+  const counts = useMemo(() => {
+    let applied = 0
+    let rejected = 0
+    for (const a of actions.values()) {
+      if (a.decision === 'applied') applied++
+      else if (a.decision === 'rejected') rejected++
+    }
+    const hiddenCount = filtered.filter((j) => !actions.get(j.id)?.decision && assessed.get(j.id)?.hidden).length
+    const review = filtered.filter((j) => !actions.get(j.id)?.decision && !assessed.get(j.id)?.hidden).length
+    return { applied, rejected, review, hiddenCount }
+  }, [actions, filtered, assessed])
+
+  type Item = { key: string; job?: Job; record?: JobAction }
+  const items: Item[] = useMemo(() => {
+    if (view === 'applied' || view === 'rejected') {
+      const q = filters.query.trim().toLowerCase()
+      return [...actions.values()]
+        .filter((a) => a.decision === view)
+        .filter((a) => !q || `${a.snapshot.title} ${a.snapshot.company} ${a.note}`.toLowerCase().includes(q))
+        .sort((a, b) => (b.appliedOn ?? b.updatedAt).localeCompare(a.appliedOn ?? a.updatedAt))
+        .map((a) => ({ key: a.jobId, job: jobsById.get(a.jobId), record: a }))
+    }
+    const pool = filtered.filter((j) => {
+      if (view === 'all') return true
+      if (actions.get(j.id)?.decision) return false
+      return showHidden || !assessed.get(j.id)?.hidden
+    })
+    const ordered =
+      sort === 'recommended'
+        ? sortJobs(pool, 'newest').sort((a, b) => (assessed.get(b.id)?.score ?? 0) - (assessed.get(a.id)?.score ?? 0))
+        : sortJobs(pool, sort)
+    return ordered.map((j) => ({ key: j.id, job: j, record: actions.get(j.id) }))
+  }, [view, actions, filtered, assessed, showHidden, sort, filters.query, jobsById])
+
   const openCount = feed.jobs.filter((j) => j.status === 'open').length
   const freshness = feedFreshness(feed.lastSuccessfulScanAt, now)
   const healthy = feed.sources.filter((s) => s.status === 'ok').length
   const failed = feed.sources.filter((s) => s.status === 'error')
   const filtersChanged = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS)
+  const learnedLines = describeLearning(learned)
+  const decidedView = view === 'applied' || view === 'rejected'
 
   const toggleCity = (c: City) =>
     set('cities', filters.cities.includes(c) ? filters.cities.filter((x) => x !== c) : [...filters.cities, c])
@@ -109,6 +159,13 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
   ]
     .filter(Boolean)
     .join(' · ')
+
+  const TABS: Array<[View, string, number | null]> = [
+    ['review', 'To review', counts.review],
+    ['applied', 'Applied', counts.applied],
+    ['rejected', 'Not interested', counts.rejected],
+    ['all', 'All', null],
+  ]
 
   return (
     <>
@@ -134,7 +191,7 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
                 <th scope="col">Company</th>
                 <th scope="col">Board</th>
                 <th scope="col">Status</th>
-                <th scope="col">India eng. roles</th>
+                <th scope="col">Roles kept</th>
                 <th scope="col">Last success</th>
               </tr>
             </thead>
@@ -167,6 +224,61 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
         </div>
       )}
 
+      {learned.decisions > 0 && (
+        <details className="panel learned">
+          <summary>
+            <Sparkles size={15} aria-hidden="true" /> Learned from your {learned.decisions} decision{learned.decisions > 1 ? 's' : ''}
+            <span className="mono muted">
+              {' '}
+              · {learned.applied} applied · {learned.rejected} not interested
+            </span>
+          </summary>
+          <div className="learned__body">
+            {learnedLines.length ? (
+              <ul>
+                {learnedLines.map((l) => (
+                  <li key={l}>{l}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="secondary">Nothing to adjust yet. Reasons on "Not interested" and more applications sharpen the ranking.</p>
+            )}
+            {learned.hiddenCompanies.length > 0 && (
+              <div className="learned__hidden">
+                {learned.hiddenCompanies.map((c) => (
+                  <button key={c} type="button" className="btn btn--ghost btn--sm" onClick={() => void unhideCompany(c)}>
+                    <Eye size={13} aria-hidden="true" /> Show {c} again
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="field__hint">
+              This ranking runs in your browser on every new scan. Your decisions are never sent to GitHub or included in the
+              public feed.
+            </p>
+          </div>
+        </details>
+      )}
+
+      <div className="tabs" role="tablist" aria-label="Job lists">
+        {TABS.map(([v, label, n]) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={view === v}
+            className={view === v ? 'tab is-active' : 'tab'}
+            onClick={() => {
+              setView(v)
+              setLimit(PAGE)
+            }}
+          >
+            {label}
+            {n !== null && <span className="tab__count mono">{n}</span>}
+          </button>
+        ))}
+      </div>
+
       <section className="panel filters" aria-label="Filters">
         <div className="filters__row">
           <label className="filters__search">
@@ -175,129 +287,159 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
             <input
               className="input"
               type="search"
-              placeholder="Search title, company, skills…"
+              placeholder={decidedView ? 'Search title, company or your notes…' : 'Search title, company, skills…'}
               value={filters.query}
               onChange={(e) => set('query', e.target.value)}
             />
           </label>
-          <label className="switch">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={filters.useProfile && prefs.active}
-              onChange={(e) => set('useProfile', e.target.checked)}
-              disabled={!prefs.active}
-            />
-            Use my profile preferences
-          </label>
-        </div>
-        <p className="field__hint">
-          {prefs.active ? (
-            <>
-              Profile filter: {prefSummary || 'work modes'}. Jobs that don't state a work mode are kept.{' '}
-              <Link to="/profile?section=location">Edit preferences</Link>
-            </>
-          ) : (
-            <>
-              Add preferred locations in your <Link to="/profile?section=location">profile</Link> to filter automatically.
-            </>
-          )}
-        </p>
-
-        <div className="filters__row filters__chips" role="group" aria-label="City">
-          {cityOptions.map((c) => (
-            <label key={c} className="choice">
-              <input type="checkbox" checked={filters.cities.includes(c)} onChange={() => toggleCity(c)} />
-              <span>{c}</span>
+          {!decidedView && (
+            <label className="switch">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={filters.useProfile && prefs.active}
+                onChange={(e) => set('useProfile', e.target.checked)}
+                disabled={!prefs.active}
+              />
+              Use my profile preferences
             </label>
-          ))}
-          {hasRemoteIndia && (
-          <label className="choice">
-            <input type="checkbox" checked={filters.remoteIndiaOnly} onChange={(e) => set('remoteIndiaOnly', e.target.checked)} />
-            <span>Remote (India)</span>
-          </label>
           )}
         </div>
+        {!decidedView && (
+          <>
+            <p className="field__hint">
+              {prefs.active ? (
+                <>
+                  Profile filter: {prefSummary || 'work modes'}. Jobs that don't state a work mode are kept.{' '}
+                  <Link to="/profile?section=location">Edit preferences</Link>
+                </>
+              ) : (
+                <>
+                  Add preferred locations in your <Link to="/profile?section=location">profile</Link> to filter automatically.
+                </>
+              )}
+            </p>
 
-        <div className="filters__row filters__selects">
-          <SelectFilter
-            label="Work mode"
-            value={filters.workModes[0] ?? ''}
-            onChange={(v) => set('workModes', v ? [v as JobWorkMode] : [])}
-            options={[
-              ['', 'Any'],
-              ['onsite', 'Onsite'],
-              ['hybrid', 'Hybrid'],
-              ['remote', 'Remote'],
-              ['unknown', 'Not stated'],
-            ]}
-          />
-          <SelectFilter
-            label="Company"
-            value={filters.companies[0] ?? ''}
-            onChange={(v) => set('companies', v ? [v] : [])}
-            options={[['', `All (${companies.length})`], ...companies.map((c) => [c, c] as [string, string])]}
-          />
-          <SelectFilter
-            label="Posted"
-            value={filters.postedWithinDays === null ? '' : String(filters.postedWithinDays)}
-            onChange={(v) => set('postedWithinDays', v ? Number(v) : null)}
-            options={[
-              ['', 'Any time'],
-              ['1', 'Last 24 hours'],
-              ['7', 'Last 7 days'],
-              ['30', 'Last 30 days'],
-            ]}
-          />
-          <SelectFilter
-            label="Sort"
-            value={sort}
-            onChange={(v) => setSort(v as SortKey)}
-            options={[
-              ['newest', 'Newest first seen'],
-              ['posted', 'Most recently posted'],
-              ['company', 'Company A–Z'],
-            ]}
-          />
-          <label className="ack filters__closed">
-            <input type="checkbox" checked={filters.showClosed} onChange={(e) => set('showClosed', e.target.checked)} />
-            <span>Show closed</span>
-          </label>
-          {filtersChanged && (
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setFilters(DEFAULT_FILTERS)}>
-              <RotateCcw size={14} aria-hidden="true" /> Reset
-            </button>
-          )}
-        </div>
+            <div className="filters__row filters__chips" role="group" aria-label="City">
+              {cityOptions.map((c) => (
+                <label key={c} className="choice">
+                  <input type="checkbox" checked={filters.cities.includes(c)} onChange={() => toggleCity(c)} />
+                  <span>{c}</span>
+                </label>
+              ))}
+              {hasRemoteIndia && (
+                <label className="choice">
+                  <input type="checkbox" checked={filters.remoteIndiaOnly} onChange={(e) => set('remoteIndiaOnly', e.target.checked)} />
+                  <span>Remote (India)</span>
+                </label>
+              )}
+            </div>
+
+            <div className="filters__row filters__selects">
+              <SelectFilter
+                label="Work mode"
+                value={filters.workModes[0] ?? ''}
+                onChange={(v) => set('workModes', v ? [v as JobWorkMode] : [])}
+                options={[
+                  ['', 'Any'],
+                  ['onsite', 'Onsite'],
+                  ['hybrid', 'Hybrid'],
+                  ['remote', 'Remote'],
+                  ['unknown', 'Not stated'],
+                ]}
+              />
+              <SelectFilter
+                label="Company"
+                value={filters.companies[0] ?? ''}
+                onChange={(v) => set('companies', v ? [v] : [])}
+                options={[['', `All (${companies.length})`], ...companies.map((c) => [c, c] as [string, string])]}
+              />
+              <SelectFilter
+                label="Posted"
+                value={filters.postedWithinDays === null ? '' : String(filters.postedWithinDays)}
+                onChange={(v) => set('postedWithinDays', v ? Number(v) : null)}
+                options={[
+                  ['', 'Any time'],
+                  ['1', 'Last 24 hours'],
+                  ['7', 'Last 7 days'],
+                  ['30', 'Last 30 days'],
+                ]}
+              />
+              <SelectFilter
+                label="Sort"
+                value={sort}
+                onChange={(v) => setSortChoice(v as SortKey | 'recommended')}
+                options={[
+                  ['recommended', hasSignals(learned, targets) ? 'Recommended for you' : 'Recommended (mark jobs to train)'],
+                  ['newest', 'Newest first seen'],
+                  ['posted', 'Most recently posted'],
+                  ['company', 'Company A–Z'],
+                ]}
+              />
+              <label className="ack filters__closed">
+                <input type="checkbox" checked={filters.showClosed} onChange={(e) => set('showClosed', e.target.checked)} />
+                <span>Show closed</span>
+              </label>
+              {counts.hiddenCount > 0 && view === 'review' && (
+                <label className="ack filters__closed">
+                  <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} />
+                  <span>Show {counts.hiddenCount} hidden</span>
+                </label>
+              )}
+              {filtersChanged && (
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                  <RotateCcw size={14} aria-hidden="true" /> Reset
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </section>
 
       <p className="mono muted" role="status" aria-live="polite" data-testid="result-count">
-        Showing {Math.min(limit, results.length)} of {results.length} matching · {openCount} open in feed
+        Showing {Math.min(limit, items.length)} of {items.length}
+        {decidedView ? '' : ' matching'} · {openCount} open in feed
       </p>
 
-      {results.length === 0 ? (
+      {items.length === 0 ? (
         <section className="panel">
           <div className="empty">
-            <h2 className="empty__title">No jobs match these filters</h2>
-            <p className="empty__text">Try clearing a filter or turning off profile preferences.</p>
+            <h2 className="empty__title">
+              {view === 'applied'
+                ? 'No applications marked yet'
+                : view === 'rejected'
+                  ? 'Nothing marked as not interested'
+                  : 'No jobs match these filters'}
+            </h2>
+            <p className="empty__text">
+              {decidedView
+                ? 'Use "Mark applied" or "Not interested" on a job. Your decisions stay in this browser.'
+                : 'Try clearing a filter or turning off profile preferences.'}
+            </p>
           </div>
         </section>
       ) : (
         <div className="job-list">
-          {results.slice(0, limit).map((j) => (
-            <JobCard key={j.id} job={j} now={now} isNew={newIds.has(j.id)} />
+          {items.slice(0, limit).map((it) => (
+            <JobCard
+              key={it.key}
+              job={it.job}
+              record={it.record}
+              now={now}
+              isNew={newIds.has(it.key)}
+              assessment={sort === 'recommended' || view === 'review' ? assessed.get(it.key) : undefined}
+            />
           ))}
         </div>
       )}
-      {results.length > limit && (
+      {items.length > limit && (
         <button type="button" className="btn btn--secondary jobs__more" onClick={() => setLimit((l) => l + PAGE)}>
-          Show {Math.min(PAGE, results.length - limit)} more
+          Show {Math.min(PAGE, items.length - limit)} more
         </button>
       )}
     </>
   )
 }
-
 function SelectFilter({
   label,
   value,

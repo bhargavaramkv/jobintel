@@ -50,6 +50,14 @@ the feed contains only public posting facts. Note that the list of tracked compa
 - Check a board before adding it: `node collector/probe.ts greenhouse:<board> lever:<site> ashby:<name>`
 - Run a scan from GitHub: Actions → *Job discovery scan* → *Run workflow*
 
+## Applied tracking and feedback
+
+On each job you can **Mark applied**, mark it **Not interested** (with optional reasons), and add a
+**private note**. These records live in IndexedDB next to your profile and are included in
+encrypted backups. JobIntel learns from them in the browser and re-ranks every new scan: it hides
+companies you rejected, demotes seniority levels and role types you passed on, and promotes roles
+like the ones you applied to. Each card explains why it was moved.
+
 ## Development
 
 ```bash

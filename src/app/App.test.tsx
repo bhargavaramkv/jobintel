@@ -23,7 +23,7 @@ describe('Dashboard', () => {
     renderAt('#/')
     expect(await screen.findByText('No discovery scan has run yet')).toBeInTheDocument()
     const kpis = screen.getByRole('region', { name: 'Key indicators' })
-    for (const label of ['New Jobs', 'Shortlisted', 'Referral Leads', 'Follow-ups']) {
+    for (const label of ['New Jobs', 'Applied', 'Referral Leads', 'Follow-ups']) {
       expect(within(kpis).getByText(label)).toBeInTheDocument()
     }
     expect(within(kpis).getAllByText('0')).toHaveLength(4)
@@ -188,12 +188,90 @@ describe('Job Discovery', () => {
     const kpis = await screen.findByRole('region', { name: 'Key indicators' })
     await waitFor(() => expect(within(kpis).getByText('New Jobs').closest('.kpi')).toHaveTextContent('2'))
     expect(screen.getByText(/Discovery active/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /View all 2 in Job Discovery/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Review all 2 in Job Discovery/ })).toBeInTheDocument()
   })
 
   it('explains an empty feed honestly', async () => {
     globalThis.fetch = mockFetchFeed(null)
     renderAt('#/jobs')
     expect(await screen.findByText('No scan has run yet')).toBeInTheDocument()
+  })
+})
+
+describe('Applied / Not interested / notes', () => {
+  const now = new Date()
+  const iso = (h: number) => new Date(now.getTime() - h * 3_600_000).toISOString()
+  const feed = makeFeed(
+    [
+      makeJob({ sourceId: 'k1', title: 'Software Engineer 2', company: 'Kong', firstSeenAt: iso(1) }),
+      makeJob({ sourceId: 'd1', title: 'Data Engineer', company: 'DataCo', firstSeenAt: iso(2) }),
+      makeJob({ sourceId: 'd2', title: 'Senior Data Engineer', company: 'Other Co', firstSeenAt: iso(3) }),
+      makeJob({ sourceId: 'b1', title: 'Backend Engineer', company: 'Other Co', firstSeenAt: iso(4) }),
+      makeJob({ sourceId: 'x1', title: 'Platform Engineer', company: 'NopeCorp', firstSeenAt: iso(5) }),
+    ],
+    iso(1),
+  )
+
+  beforeEach(() => {
+    globalThis.fetch = mockFetchFeed(feed)
+  })
+
+  const card = (title: RegExp) => screen.getByRole('link', { name: title }).closest('article') as HTMLElement
+
+  it('marks a job applied, keeps it after reload, and lists it under Applied', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderAt('#/jobs')
+    await screen.findByRole('link', { name: /Software Engineer 2/ })
+    await user.click(within(card(/Software Engineer 2/)).getByRole('button', { name: /Mark applied/ }))
+    // Leaves "To review"
+    await waitFor(() => expect(screen.queryByRole('link', { name: /Software Engineer 2/ })).toBeNull())
+    expect(screen.getByRole('tab', { name: /Applied/ })).toHaveTextContent('1')
+
+    unmount()
+    await resetDatabaseConnection()
+    renderAt('#/jobs')
+    await user.click(await screen.findByRole('tab', { name: /Applied/ }))
+    const applied = card(/Software Engineer 2/)
+    expect(within(applied).getByText(/Applied ·/)).toBeInTheDocument()
+
+    // Add a private note
+    await user.click(within(applied).getByRole('button', { name: /Add note/ }))
+    await user.type(within(applied).getByLabelText('Private note'), 'Applied via careers page')
+    await user.click(within(applied).getByRole('button', { name: 'Save note' }))
+    expect(await within(applied).findByText(/Applied via careers page/)).toBeInTheDocument()
+
+    // Undo returns it to review
+    await user.click(within(applied).getByRole('button', { name: /Undo applied/ }))
+    await user.click(screen.getByRole('tab', { name: /To review/ }))
+    expect(await screen.findByRole('link', { name: /Software Engineer 2/ })).toBeInTheDocument()
+  })
+
+  it('learns from "not interested" reasons: hides a company and demotes similar roles', async () => {
+    const user = userEvent.setup()
+    renderAt('#/jobs')
+    await screen.findByRole('link', { name: /Platform Engineer/ })
+
+    await user.click(within(card(/Platform Engineer/)).getByRole('button', { name: /Not interested/ }))
+    let dialog = await screen.findByRole('dialog', { name: 'Not interested' })
+    await user.click(within(dialog).getByRole('checkbox', { name: /Not interested in this company/ }))
+    await user.click(within(dialog).getByRole('button', { name: 'Mark not interested' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    await user.click(within(card(/^Data Engineer/)).getByRole('button', { name: /Not interested/ }))
+    dialog = await screen.findByRole('dialog', { name: 'Not interested' })
+    await user.click(within(dialog).getByRole('checkbox', { name: /Not my kind of role/ }))
+    await user.type(within(dialog).getByLabelText(/Note/), 'No data roles')
+    await user.click(within(dialog).getByRole('button', { name: 'Mark not interested' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    // Learned panel explains the rules; the similar "Senior Data Engineer" now ranks below Backend.
+    expect(await screen.findByText(/Learned from your 2 decisions/)).toBeInTheDocument()
+    const titles = screen.getAllByRole('article').map((a) => within(a).getByRole('heading').textContent ?? '')
+    expect(titles.findIndex((t) => t.includes('Backend Engineer'))).toBeLessThan(titles.findIndex((t) => t.includes('Senior Data Engineer')))
+    expect(within(card(/Senior Data Engineer/)).getByText(/Like roles you passed on: data/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /Not interested/ }))
+    expect(screen.getByRole('link', { name: /Platform Engineer/ })).toBeInTheDocument()
+    expect(screen.getByText(/No data roles/)).toBeInTheDocument()
   })
 })

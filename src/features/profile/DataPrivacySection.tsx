@@ -11,6 +11,7 @@ import {
   restoreFromText,
   type BackupPayload,
 } from '../../storage/backup'
+import { useJobActions } from '../jobs/useJobActions'
 import { useProfile } from './useProfile'
 import { downloadJson } from './download'
 
@@ -25,6 +26,7 @@ interface DataPrivacySectionProps {
 
 export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySectionProps) {
   const { profile, replace, clearAll } = useProfile()
+  const { actions: jobActions, replaceAll } = useJobActions()
   const [exportOpen, setExportOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
@@ -58,7 +60,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
           <li>
             <KeyRound size={18} aria-hidden="true" />
             <div>
-              <strong>Backups are encrypted with your passphrase.</strong> AES-256-GCM with a PBKDF2-derived key. If you
+              <strong>Backups are encrypted with your passphrase</strong> and include your profile plus applied / not-interested decisions and notes. AES-256-GCM with a PBKDF2-derived key. If you
               lose the passphrase, the backup cannot be recovered by anyone.
             </div>
           </li>
@@ -85,7 +87,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
               type="button"
               className="btn btn--secondary"
               onClick={() => setExportOpen(true)}
-              disabled={!profile}
+              disabled={!profile && jobActions.size === 0}
               title={profile ? undefined : 'Save a profile first'}
             >
               <Download size={15} aria-hidden="true" /> Export
@@ -127,6 +129,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
         onClose={() => setImportOpen(false)}
         onRestore={async (payload) => {
           await replace(payload.profile)
+          await replaceAll(payload.jobActions)
           setImportOpen(false)
           setNotice({ kind: 'success', text: 'Backup restored. Your profile has been replaced.' })
         }}
@@ -156,6 +159,7 @@ function ExportDialog({
   onDone: (message: string) => void
 }) {
   const { profile } = useProfile()
+  const { actions: jobActions } = useJobActions()
   const [pass, setPass] = useState('')
   const [confirm, setConfirm] = useState('')
   const [ack, setAck] = useState(false)
@@ -179,7 +183,7 @@ function ExportDialog({
     if (!ack) return setError({ form: 'Confirm that you understand the passphrase cannot be recovered.' })
     setBusy(true)
     try {
-      const envelope = await createBackup(profile, pass)
+      const envelope = await createBackup(profile, pass, { jobActions: [...jobActions.values()] })
       downloadJson(backupFileName(), envelope)
       setPass('')
       setConfirm('')

@@ -46,10 +46,24 @@
 - Requirement bullets come only from recognised headings. Some postings have none.
 - Schedules are best-effort (GitHub can delay them), and they stop after 60 days without repository activity. The scan's own commits count as activity.
 - Search-engine discovery and aggregators (plan items 5–6) are not implemented. Only stable public ATS APIs are used.
-## Phase 3: matching engine (not started)
+## Applied tracking and feedback learning ✅ (pulled forward at the user's request)
+
+- [x] On every job: **Mark applied** (with an editable date), **Not interested** (optional reasons) and a **private note**
+- [x] Tabs: To review / Applied / Not interested / All. Records whose job has left the feed stay listed, labelled "No longer listed".
+- [x] Stored in IndexedDB (DB v2 migration, new `jobActions` store). Included in encrypted backups (data schema 2; v1 backups still import) and cleared by "Clear data".
+- [x] In-browser learning, re-applied to every new scan:
+  - "Not interested in this company" hides that company (reversible)
+  - "Too senior/junior" demotes that level and beyond
+  - "Wrong tech stack / not my kind of role" demotes title words, and Applied promotes them
+  - The profile's target seniority demotes roles two or more levels away
+  - Every adjustment is shown on the card ("Like roles you applied to: backend"), and a "Learned from your N decisions" panel lists the rules
+- [x] Dashboard: real **Applied** count, and the feed shows only undecided jobs, ranked
+- Decisions never leave the browser. The GitHub scan never sees them; the learning runs client-side on each new feed.
+
+## Phase 3: matching engine (not started; skill-based fit scoring still to do)
 ## Phase 4: referral intelligence (not started)
 ## Phase 5: outreach strategist (not started)
-## Phase 6: application management (not started)
+## Phase 6: application management (partly done: applied date + notes; interview/offer stages, status history and follow-ups not started)
 ## Phase 7: scheduled automation (scheduled scan done in Phase 2; reminders/notifications not started)
 ## Phase 8: analytics (not started)
 ## Phase 9: reliability & polish (not started)
