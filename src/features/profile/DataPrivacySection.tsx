@@ -205,7 +205,7 @@ function ExportDialog({
             Cancel
           </button>
           <button type="submit" form="export-form" className="btn btn--primary" disabled={busy}>
-            {busy ? 'Encryptingâ€¦' : 'Encrypt & download'}
+            {busy ? 'Encrypting…' : 'Encrypt & download'}
           </button>
         </>
       }
@@ -308,7 +308,7 @@ function ImportDialog({
             Cancel
           </button>
           <button type="submit" form="import-form" className="btn btn--primary" disabled={busy}>
-            {busy ? 'Decryptingâ€¦' : 'Decrypt & replace'}
+            {busy ? 'Decrypting…' : 'Decrypt & replace'}
           </button>
         </>
       }
@@ -410,7 +410,7 @@ function ClearDialog({
             onClick={confirm}
             disabled={busy || typed !== CLEAR_PHRASE}
           >
-            {busy ? 'Deletingâ€¦' : 'Delete permanently'}
+            {busy ? 'Deleting…' : 'Delete permanently'}
           </button>
         </>
       }
