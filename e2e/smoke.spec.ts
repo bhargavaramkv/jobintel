@@ -55,6 +55,45 @@ test('profile persists across a reload and deep links survive refresh', async ({
   expect(external).toEqual([])
 })
 
+test('encrypted backup exports, and restores after clearing data', async ({ page }) => {
+  const passphrase = 'e2e test passphrase only'
+  await page.goto('./#/profile?section=identity')
+  await page.getByLabel('Current job title').fill('Backup Check Engineer')
+  await page.getByRole('button', { name: /Save profile/ }).click()
+  await expect(page.getByText(/Saved locally/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Data & privacy' }).click()
+  // Dialog forms must never be nested inside another form.
+  await page.getByRole('button', { name: /^Export$/ }).click()
+  expect(await page.evaluate(() => document.querySelectorAll('form form').length)).toBe(0)
+  const dialog = page.getByRole('dialog', { name: 'Export encrypted backup' })
+  await dialog.getByLabel('Passphrase', { exact: true }).fill(passphrase)
+  await dialog.getByLabel('Confirm passphrase').fill(passphrase)
+  await dialog.getByRole('checkbox').check()
+  const downloadPromise = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: /Encrypt & download/ }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^jobintel-backup-.*\.jibak\.json$/)
+  const file = await download.path()
+  await expect(page.getByText(/Encrypted backup downloaded/)).toBeVisible()
+
+  await page.getByRole('button', { name: /Clear data/ }).click()
+  const clear = page.getByRole('alertdialog', { name: 'Delete all local data?' })
+  await clear.getByLabel(/Type DELETE/).fill('DELETE')
+  await clear.getByRole('button', { name: 'Delete permanently' }).click()
+  await expect(page.getByText(/All local JobIntel data was deleted/)).toBeVisible()
+
+  await page.getByRole('button', { name: /^Import$/ }).click()
+  const imp = page.getByRole('dialog', { name: 'Import encrypted backup' })
+  await imp.getByLabel('Backup file').setInputFiles(file)
+  await imp.getByLabel('Passphrase').fill(passphrase)
+  await imp.getByRole('button', { name: /Decrypt & replace/ }).click()
+  await expect(page.getByText(/Backup restored/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Professional identity' }).click()
+  await expect(page.getByLabel('Current job title')).toHaveValue('Backup Check Engineer')
+})
+
 test('unknown hash routes fall back to the dashboard', async ({ page }) => {
   await page.goto('./#/does-not-exist')
   await expect(page.getByText('Your job feed is not connected yet')).toBeVisible()
