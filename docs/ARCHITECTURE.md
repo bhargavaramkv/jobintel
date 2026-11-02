@@ -1,4 +1,4 @@
-# JobIntel architecture (v0.1 / Phases 1–2)
+# JobIntel architecture (v0.9 / Phases 1–9)
 
 ## Decisions
 
@@ -175,3 +175,10 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
 - "Reached a stage" uses the status history plus the current stage, so later changes never erase earlier
   progress. Legacy applied records without history count as Applied.
 - Charts are plain HTML/CSS (single-series bars in the accent colour with direct value labels); no chart library.
+
+## Reliability & polish (Phase 9)
+
+- Routes other than the dashboard use React Router `lazy`, so each screen is its own chunk.
+- `vite.config.ts` injects a CSP `<meta>` at build time only (the dev server needs inline scripts).
+- `e2e/workflow.spec.ts` runs axe-core on every screen and a full cross-feature flow including backup restore.
+- Reviews and runbooks: `docs/SECURITY.md`, `docs/RECOVERY.md`.

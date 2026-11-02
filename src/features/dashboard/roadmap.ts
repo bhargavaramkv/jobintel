@@ -22,7 +22,7 @@ export const ROADMAP = [
   },
   { phase: 7, label: 'Scheduled scans & reminders', done: true, blurb: 'Reminders for due follow-ups while the app is open.' },
   { phase: 8, label: 'Analytics', done: true, blurb: 'Funnel, response rates and skill gaps from your own records.' },
-  { phase: 9, label: 'Reliability & polish', done: false, blurb: 'Security, accessibility and recovery review.' },
+  { phase: 9, label: 'Reliability & polish', done: true, blurb: 'Security, accessibility and recovery review.' },
 ] as const
 
 export const NEXT_MILESTONE = ROADMAP.find((r) => !r.done)

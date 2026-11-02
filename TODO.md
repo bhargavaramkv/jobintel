@@ -1,5 +1,7 @@
 # Implementation status
 
+All planned phases (1–9) are implemented. See `docs/SECURITY.md` and `docs/RECOVERY.md`.
+
 ## Phase 1: app shell, dark UX, local profile ✅
 
 - [x] React + TypeScript + Vite static build, `base: /jobintel/`
@@ -148,4 +150,14 @@
 - [x] Recommendations, each with its evidence and records; group comparisons are labelled "Correlation", not cause; small-sample warnings below 5 applications
 - [x] Every number expands to the records behind it; CSV export only on request
 - [x] Mobile bottom navigation fits all seven areas
-## Phase 9: reliability & polish (not started)
+## Phase 9: reliability, security & polish ✅
+
+- [x] Security & privacy review: `docs/SECURITY.md`
+- [x] Content-Security-Policy meta tag on the production build; `check:dist` requires it and E2E fails on CSP violations
+- [x] `check:dist` also rejects any private field name (leads, applications, outreach, new profile fields) in public data
+- [x] Dependency audit: `npm audit` clean
+- [x] Accessibility: axe-core (WCAG 2 A/AA) on every screen at desktop, tablet and mobile widths in E2E; fixed in-text links that relied on colour alone
+- [x] Full-workflow E2E: shortlist → referral lead → outreach → application → analytics → encrypted backup → clear → restore
+- [x] Performance: screens other than the dashboard load on first visit (route-level code splitting); no chunk-size warning
+- [x] Workflow failure alerts (Phase 7) and recovery instructions: `docs/RECOVERY.md`, including supported browsers
+- [x] Mobile navigation fits all seven areas

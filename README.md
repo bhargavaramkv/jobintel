@@ -3,7 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.9. Phases 1–8 (local profile, job discovery, matching, referral leads, outreach, application tracking, automation + reminders, analytics) are done. See
+**Status:** v0.9. All planned phases (1–9) are done: local profile, job discovery, matching, referral leads, outreach, application tracking, automation + reminders, analytics, and a security/accessibility/reliability pass. See [`docs/SECURITY.md`](docs/SECURITY.md), [`docs/RECOVERY.md`](docs/RECOVERY.md),
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -125,6 +125,12 @@ not deploy.
 The site is a **project site** at `https://<user>.github.io/jobintel/`, so Vite's `base` is
 `/jobintel/`. If you rename the repository or use a custom domain, set `VITE_BASE_PATH` at build
 time. Routing uses `HashRouter` (`#/profile`), so refreshing a deep link never returns a 404.
+
+## Security and recovery
+
+See [`docs/SECURITY.md`](docs/SECURITY.md) for the security and privacy review (CSP, dist checks, backups,
+workflow permissions) and [`docs/RECOVERY.md`](docs/RECOVERY.md) for restoring data, fixing a stale feed and
+supported browsers.
 
 ## Architecture
 

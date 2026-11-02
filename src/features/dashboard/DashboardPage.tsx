@@ -24,7 +24,7 @@ import { followUpState } from '../../domain/outreach/drafts'
 import { threadOf } from '../../domain/outreach/messages'
 import { dueApplicationFollowUps } from '../../domain/applications/pipeline'
 import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
-import { localDate, stageOf } from '../../domain/jobs/actions'
+import { localDate, STAGE_LABEL, stageOf } from '../../domain/jobs/actions'
 import { matchJob, matchRank } from '../../domain/match/score'
 import { useJobFeed } from '../jobs/jobFeed'
 import { useProfile } from '../profile/useProfile'
@@ -69,6 +69,18 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   }, [feed, prefs, now, actions, learned, targets, ranked, profile])
   const { contacts } = useContacts()
   const { messages } = useOutreach()
+  // Recent activity from your own records: stage changes and logged messages.
+  const activity = useMemo(() => {
+    const events: Array<{ key: string; at: string; text: string }> = []
+    for (const a of actions.values())
+      (a.history ?? []).forEach((h, i) =>
+        events.push({ key: `${a.jobId}-${i}`, at: h.at, text: `${STAGE_LABEL[h.stage]}: ${a.snapshot.title} at ${a.snapshot.company}` }),
+      )
+    for (const m of messages.values())
+      if (m.status === 'sent' && m.sentOn)
+        events.push({ key: m.id, at: m.sentOn, text: `Message sent to ${contacts.get(m.contactId)?.name ?? 'a removed lead'}` })
+    return events.sort((x, y) => y.at.localeCompare(x.at)).slice(0, 8)
+  }, [actions, messages, contacts])
   const followUpsDue = useMemo(() => {
     const day = localDate(now)
     return [...contacts.values()].filter((c) => {
@@ -329,9 +341,17 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
           </h2>
           <Activity size={16} className="muted" aria-hidden="true" />
         </div>
-        <p className="panel__body secondary">
-          Activity will appear here once discovery and application tracking are enabled.
-        </p>
+        {activity.length === 0 ? (
+          <p className="panel__body secondary">Activity will appear here as you shortlist, apply and log outreach.</p>
+        ) : (
+          <ul className="panel__body activity__list">
+            {activity.map((e) => (
+              <li key={e.key}>
+                <span className="mono muted">{e.at.slice(0, 10)}</span> {e.text}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   )
