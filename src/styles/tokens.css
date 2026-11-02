@@ -1,0 +1,68 @@
+/* JobIntel design tokens: dark-only, blue/cyan accent. No purple. */
+:root {
+  color-scheme: dark;
+
+  --bg: #070b12;
+  --bg-elevated: #0b111b;
+  --surface: #0d1420;
+  --surface-hover: #111d2b;
+  --surface-sunken: #090e17;
+  --border: #1d2a3a;
+  --border-strong: #2a3b50;
+
+  --text-primary: #eaf2fa;
+  --text-secondary: #9aaabd;
+  --text-muted: #7a8a9e; /* lifted from #68788C for AA contrast on --surface */
+
+  --accent: #16b8ff;
+  --accent-strong: #39c8ff;
+  --accent-soft: rgba(22, 184, 255, 0.12);
+  --accent-line: rgba(22, 184, 255, 0.35);
+  --on-accent: #04121c;
+
+  --success: #35d39a;
+  --success-soft: rgba(53, 211, 154, 0.12);
+  --warning: #f5b84b;
+  --warning-soft: rgba(245, 184, 75, 0.12);
+  --danger: #ff6b78;
+  --danger-soft: rgba(255, 107, 120, 0.12);
+
+  --font-sans: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  --rail-width: 80px;
+  --header-height: 60px;
+  --content-max: 1280px;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 150ms;
+
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0ms;
+  }
+}
