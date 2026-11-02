@@ -3,7 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.2. Phases 1–3 (app shell + local profile, job discovery, matching) are done. See
+**Status:** v0.3. Phases 1–4 (app shell + local profile, job discovery, matching, referral leads) are done. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -55,6 +55,14 @@ role alignment (20%), location and work mode (10%), seniority (10%) and other re
 *Details* on a job to see each factor with what matched and what's missing. Factors without data are left out
 rather than counted as a match, and the card says how much of the score had evidence. Shortlist the jobs you
 want to pursue; they move to the *Shortlisted* tab.
+
+## Referral leads (Phase 4)
+
+*Referrals* lists the companies in your pipeline and helps you record people who could refer you. You find
+them yourself (the app only opens public searches in a new tab), and every lead needs the link where you found
+it. JobIntel never lets you type a relationship as a claim: "former colleague" appears only when the lead's
+companies overlap your own past employers, "alumni" only when colleges overlap, and each label shows whether it
+is **verified** (you confirmed it) or **inferred**. There are no email or phone fields.
 
 ## Applied tracking and feedback
 

@@ -35,8 +35,9 @@ describe('Dashboard', () => {
   it('marks planned areas as unavailable rather than linking to them', async () => {
     renderAt('#/')
     const nav = await screen.findByRole('navigation', { name: 'Primary' })
-    expect(within(nav).getByText(/Referrals, planned for Phase 4/)).toBeInTheDocument()
-    expect(within(nav).queryByRole('link', { name: /Referrals/ })).toBeNull()
+    expect(within(nav).getByText(/Outreach, planned for Phase 5/)).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: /Outreach/ })).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Referrals' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Job Discovery' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
   })
@@ -324,5 +325,44 @@ describe('Matching and shortlist (Phase 3)', () => {
     await waitFor(() => expect(screen.queryByRole('link', { name: /Backend Engineer II/ })).toBeNull())
     await user.click(screen.getByRole('tab', { name: /Shortlisted/ }))
     expect(within(card(/Backend Engineer II/)).getAllByText(/Shortlisted/).length).toBeGreaterThan(0)
+  })
+})
+
+describe('Referral leads (Phase 4)', () => {
+  beforeEach(async () => {
+    await profileRepository.save(makeProfile({ currentCompany: 'Globex', pastEmployers: ['Initech'], targetCompanies: ['Acme Corp'] }))
+    await resetDatabaseConnection()
+  })
+
+  it('requires a source, derives relationships from evidence, and persists leads', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderAt('#/referrals')
+    expect(await screen.findByText('No referral leads yet')).toBeInTheDocument()
+    expect(await screen.findByText('Acme Corp')).toBeInTheDocument() // target company to cover
+
+    await user.click(screen.getAllByRole('button', { name: /Add lead/ })[1])
+    const dialog = await screen.findByRole('dialog', { name: 'Add referral lead' })
+    expect(within(dialog).getByLabelText('Company')).toHaveValue('Acme Corp')
+    await user.type(within(dialog).getByLabelText('Name'), 'Test Lead')
+    // "Worked together" can't be ticked without a shared employer.
+    expect(within(dialog).getByRole('checkbox', { name: /actually worked together/ })).toBeDisabled()
+    await user.click(within(dialog).getByRole('button', { name: 'Save lead' }))
+    expect(await within(dialog).findByText(/Add the link where you found this person/)).toBeInTheDocument()
+
+    await user.type(within(dialog).getByLabelText(/Where you found them/), 'https://example.com/team')
+    await user.type(within(dialog).getByRole('textbox', { name: /Companies they list/ }), 'Initech{Enter}')
+    expect(within(dialog).getByRole('checkbox', { name: /actually worked together/ })).toBeEnabled()
+    await user.click(within(dialog).getByRole('button', { name: 'Save lead' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    const lead = screen.getByRole('heading', { name: 'Test Lead' }).closest('article') as HTMLElement
+    expect(within(lead).getByText('Former colleague')).toBeInTheDocument()
+    expect(within(lead).getByText('Inferred')).toBeInTheDocument()
+    expect(within(lead).getByRole('link', { name: 'example.com' })).toHaveAttribute('href', 'https://example.com/team')
+
+    unmount()
+    await resetDatabaseConnection()
+    renderAt('#/referrals')
+    expect(await screen.findByRole('heading', { name: 'Test Lead' })).toBeInTheDocument()
   })
 })

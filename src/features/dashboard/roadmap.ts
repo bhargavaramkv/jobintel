@@ -5,7 +5,7 @@ export const ROADMAP = [
   {
     phase: 4,
     label: 'Referral intelligence',
-    done: false,
+    done: true,
     blurb: 'Record referral leads for shortlisted companies, each with a source and a confidence label.',
   },
   {

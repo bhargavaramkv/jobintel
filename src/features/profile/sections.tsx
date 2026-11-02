@@ -90,6 +90,30 @@ export function IdentitySection({ draft, errors, update }: SectionProps) {
           rows={5}
         />
       </div>
+      <div className="stack">
+        <TagInput<string>
+          label="Past employers"
+          optional
+          items={draft.pastEmployers}
+          getLabel={asString}
+          create={asString}
+          onChange={(v) => update('pastEmployers', v)}
+          error={errors.pastEmployers}
+          placeholder="Add a company you worked at"
+          hint="Used only to spot genuine shared history with referral leads. Never published."
+        />
+        <TagInput<string>
+          label="Colleges / universities"
+          optional
+          items={draft.schools}
+          getLabel={asString}
+          create={asString}
+          onChange={(v) => update('schools', v)}
+          error={errors.schools}
+          placeholder="Add a college or university"
+          hint="Used only to suggest alumni connections. Never published."
+        />
+      </div>
     </section>
   )
 }

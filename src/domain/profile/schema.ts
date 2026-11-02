@@ -86,6 +86,10 @@ export const candidateProfileSchema = z
     willingToRelocate: z.boolean(),
     companyTypes: uniqueEnumList(COMPANY_TYPES),
     targetCompanies: tagList,
+    /** Earlier employers, used only to spot genuine shared context with referral leads (Phase 4). */
+    pastEmployers: tagList.optional(),
+    /** Colleges / universities attended, for the same purpose. */
+    schools: tagList.optional(),
     compensation: compensationSchema.optional(),
     noticePeriod: shortText.optional(),
     createdAt: z.string().min(1),

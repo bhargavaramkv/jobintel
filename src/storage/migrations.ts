@@ -14,6 +14,11 @@ const MIGRATIONS: Array<(db: IDBDatabase, tx: IDBTransaction) => void> = [
   // v1 -> v2: private per-job decisions (applied / not interested) and notes
   (db, tx) => {
     db.createObjectStore(STORES.jobActions, { keyPath: 'jobId' })
+    tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: 2 })
+  },
+  // v2 -> v3: referral leads (Phase 4)
+  (db, tx) => {
+    db.createObjectStore(STORES.contacts, { keyPath: 'id' })
     tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: SCHEMA_VERSION })
   },
 ]

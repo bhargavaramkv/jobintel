@@ -12,6 +12,7 @@ import {
   type BackupPayload,
 } from '../../storage/backup'
 import { useJobActions } from '../jobs/useJobActions'
+import { useContacts } from '../referrals/useContacts'
 import { useProfile } from './useProfile'
 import { downloadJson } from './download'
 
@@ -27,6 +28,7 @@ interface DataPrivacySectionProps {
 export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySectionProps) {
   const { profile, replace, clearAll } = useProfile()
   const { actions: jobActions, replaceAll } = useJobActions()
+  const { contacts, replaceAll: replaceContacts } = useContacts()
   const [exportOpen, setExportOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
@@ -87,7 +89,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
               type="button"
               className="btn btn--secondary"
               onClick={() => setExportOpen(true)}
-              disabled={!profile && jobActions.size === 0}
+              disabled={!profile && jobActions.size === 0 && contacts.size === 0}
               title={profile ? undefined : 'Save a profile first'}
             >
               <Download size={15} aria-hidden="true" /> Export
@@ -130,6 +132,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
         onRestore={async (payload) => {
           await replace(payload.profile)
           await replaceAll(payload.jobActions)
+          await replaceContacts(payload.contacts)
           setImportOpen(false)
           setNotice({ kind: 'success', text: 'Backup restored. Your profile has been replaced.' })
         }}
@@ -160,6 +163,7 @@ function ExportDialog({
 }) {
   const { profile } = useProfile()
   const { actions: jobActions } = useJobActions()
+  const { contacts } = useContacts()
   const [pass, setPass] = useState('')
   const [confirm, setConfirm] = useState('')
   const [ack, setAck] = useState(false)
@@ -183,7 +187,10 @@ function ExportDialog({
     if (!ack) return setError({ form: 'Confirm that you understand the passphrase cannot be recovered.' })
     setBusy(true)
     try {
-      const envelope = await createBackup(profile, pass, { jobActions: [...jobActions.values()] })
+      const envelope = await createBackup(profile, pass, {
+        jobActions: [...jobActions.values()],
+        contacts: [...contacts.values()],
+      })
       downloadJson(backupFileName(), envelope)
       setPass('')
       setConfirm('')

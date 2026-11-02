@@ -13,11 +13,11 @@ export type NavItem =
   | { id: string; label: string; shortLabel: string; icon: LucideIcon; kind: 'active'; path: string }
   | { id: string; label: string; shortLabel: string; icon: LucideIcon; kind: 'planned'; phase: number }
 
-/** Implemented: Dashboard, Job Discovery (Phase 2), Profile. Planned entries never route anywhere. */
+/** Planned entries never route anywhere. */
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard, kind: 'active', path: '/' },
   { id: 'discovery', label: 'Job Discovery', shortLabel: 'Jobs', icon: Radar, kind: 'active', path: '/jobs' },
-  { id: 'referrals', label: 'Referrals', shortLabel: 'Refs', icon: Users, kind: 'planned', phase: 4 },
+  { id: 'referrals', label: 'Referrals', shortLabel: 'Refs', icon: Users, kind: 'active', path: '/referrals' },
   { id: 'outreach', label: 'Outreach', shortLabel: 'Reach', icon: Send, kind: 'planned', phase: 5 },
   { id: 'applications', label: 'Applications', shortLabel: 'Apps', icon: Briefcase, kind: 'planned', phase: 6 },
   { id: 'analytics', label: 'Analytics', shortLabel: 'Stats', icon: ChartLine, kind: 'planned', phase: 8 },

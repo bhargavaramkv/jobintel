@@ -3,6 +3,7 @@ import { AppShell } from '../components/layout/AppShell'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { JobsPage } from '../features/jobs/JobsPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
+import { ReferralsPage } from '../features/referrals/ReferralsPage'
 
 /**
  * Hash routing keeps deep links working on GitHub Pages project sites,
@@ -15,6 +16,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'jobs', element: <JobsPage /> },
+      { path: 'referrals', element: <ReferralsPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

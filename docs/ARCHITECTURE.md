@@ -124,3 +124,13 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
 - Mandatory vs preferred: the collector writes `preferred` (bullets under preferred-style headings); bullets that
   say "a plus" / "nice to have" also count as preferred.
 - Runs on every render of the feed in the browser; nothing about the profile leaves it.
+
+## Referral leads (Phase 4)
+
+- IndexedDB **v3** adds the `contacts` store (keyPath `id`). `src/storage/recordStore.ts` is a small typed,
+  validating repository used for it (and later stores).
+- `src/domain/referrals/contacts.ts`: the schema holds only facts (`pastCompanies`, `schools`, `mutual`,
+  `knowsPersonally`, `workedTogether`, `sourceUrl`). `relationshipsOf()` derives each relationship with a
+  confidence and evidence string. There is no field where a relationship can be asserted directly, so the UI
+  cannot show an unsupported claim.
+- Backups: data schema 3 adds `contacts` (older backups restore with none).

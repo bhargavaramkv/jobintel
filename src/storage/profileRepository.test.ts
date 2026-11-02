@@ -45,7 +45,7 @@ describe('profileRepository', () => {
     const db = await openDatabase()
     expect(db.name).toBe(DB_NAME)
     expect(db.version).toBe(DB_VERSION)
-    expect([...db.objectStoreNames].sort()).toEqual([STORES.jobActions, STORES.meta, STORES.profile].sort())
+    expect([...db.objectStoreNames].sort()).toEqual(Object.values(STORES).sort())
   })
 
   it('upgrades an existing v1 database without losing the profile', async () => {

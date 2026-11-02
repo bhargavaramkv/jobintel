@@ -18,6 +18,7 @@ import { applyFilters, DEFAULT_FILTERS, feedFreshness, NEW_WINDOW_DAYS, newJobs,
 import { calculateReadiness } from '../../domain/profile/readiness'
 import { JobCard } from '../jobs/JobCard'
 import { useJobActions } from '../jobs/useJobActions'
+import { useContacts } from '../referrals/useContacts'
 import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
 import { stageOf } from '../../domain/jobs/actions'
 import { matchJob, matchRank } from '../../domain/match/score'
@@ -36,7 +37,6 @@ interface Kpi {
 
 /** Not-yet-built metrics stay at zero with their phase; no number is invented. */
 const PLANNED_KPIS: Kpi[] = [
-  { label: 'Referral Leads', value: 0, icon: Users, hint: 'Available in Phase 4' },
   { label: 'Follow-ups', value: 0, icon: CalendarClock, hint: 'Available in Phase 5' },
 ]
 
@@ -66,6 +66,8 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
     const fit = new Map(canMatch ? newest.map((j) => [j.id, matchRank(matchJob(j, profile, targets))]) : [])
     return newest.sort((a, b) => (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) || score.get(b.id)! - score.get(a.id)!)
   }, [feed, prefs, now, actions, learned, targets, ranked, profile])
+  const { contacts } = useContacts()
+  const leadCount = useMemo(() => [...contacts.values()].filter((c) => c.status !== 'dismissed').length, [contacts])
   const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
   const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
   const freshness = feedFreshness(feed?.lastSuccessfulScanAt, now)
@@ -81,6 +83,12 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
       value: appliedCount,
       icon: Bookmark,
       hint: appliedCount ? 'Marked by you in this browser' : 'Mark jobs as applied to count them',
+    },
+    {
+      label: 'Referral Leads',
+      value: leadCount,
+      icon: Users,
+      hint: leadCount ? 'Recorded by you, with sources' : 'Add leads in Referrals',
     },
     ...PLANNED_KPIS,
   ]

@@ -34,6 +34,8 @@ const FIELD_SECTION: Record<keyof ProfileDraft, ProfileSectionId> = {
   currentCompany: 'identity',
   yearsExperience: 'identity',
   professionalSummary: 'identity',
+  pastEmployers: 'identity',
+  schools: 'identity',
   primarySkills: 'skills',
   secondarySkills: 'skills',
   targetRoles: 'roles',

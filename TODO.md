@@ -77,7 +77,22 @@
 - Skill matching is by name. A posting that describes a skill without naming it isn't recognised.
 - Years of experience are read from text like "3+ years" or "3–5 yrs"; the largest lower bound wins, which can over-read numbers that aren't requirements.
 - Older feed entries have no `preferred` field until the next scan.
-## Phase 4: referral intelligence (not started)
+## Phase 4: referral intelligence ✅
+
+- [x] Referrals page (`#/referrals`): "Companies to cover" from your pipeline (shortlisted / active applications) and target companies, with lead counts
+- [x] "Find people" opens public searches (LinkedIn people search, web search) in a new tab. JobIntel fetches and stores nothing from them
+- [x] Leads stored in IndexedDB (DB v3, `contacts` store); included in encrypted backups (data schema 3) and cleared by "Clear data"
+- [x] Every lead needs a source URL (http/https). There are no email or phone fields
+- [x] Relationships are derived from recorded facts, never typed in: former colleague (overlapping employers, normalised), alumni (overlapping colleges), mutual connection (named introducer + evidence), direct connection (you confirm), recruiter / engineering team (from role)
+- [x] Confidence labels: Verified (you confirmed) / Inferred (from overlapping facts) / Unknown. "Worked together" can be confirmed only when an employer overlaps
+- [x] Ranking by strength of shared context × confidence, plus pipeline / target-company relevance and matching role area; reasons shown
+- [x] Status per lead: new, I know them, I don't know them, contacted, dismissed
+- [x] Profile gains optional *Past employers* and *Colleges* (used only for this comparison)
+
+### Known limitations
+
+- Overlapping employers don't prove you overlapped in time or team; such leads stay "Inferred" until you confirm.
+- Leads are entered by hand. There is no import from LinkedIn or other networks, by design.
 ## Phase 5: outreach strategist (not started)
 ## Phase 6: application management (partly done: applied date + notes; interview/offer stages, status history and follow-ups not started)
 ## Phase 7: scheduled automation (scheduled scan done in Phase 2; reminders/notifications not started)
