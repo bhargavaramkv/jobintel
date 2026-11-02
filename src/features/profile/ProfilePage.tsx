@@ -57,7 +57,7 @@ export function ProfilePage() {
   if (state.status === 'loading') {
     return (
       <div className="profile-loading" role="status">
-        <Loader2 size={18} className="spin" aria-hidden="true" /> Loading your local profileâ€¦
+        <Loader2 size={18} className="spin" aria-hidden="true" /> Loading your local profile…
       </div>
     )
   }
@@ -278,7 +278,7 @@ function ProfileEditor({ stored, loadError, save, dataNotice, setDataNotice }: E
                   disabled={!dirty || saveState.kind === 'saving'}
                 >
                   <Save size={15} aria-hidden="true" />
-                  {saveState.kind === 'saving' ? 'Savingâ€¦' : 'Save profile'}
+                  {saveState.kind === 'saving' ? 'Saving…' : 'Save profile'}
                 </button>
               </div>
             </div>
@@ -318,7 +318,7 @@ function SaveStatus({ state, dirty }: { state: SaveState; dirty: boolean }) {
       </span>
     )
   } else if (state.kind === 'saving') {
-    content = <span className="savebar__status">Saving to this browserâ€¦</span>
+    content = <span className="savebar__status">Saving to this browser…</span>
   } else if (dirty) {
     content = (
       <span className="savebar__status savebar__status--dirty">
@@ -331,7 +331,7 @@ function SaveStatus({ state, dirty }: { state: SaveState; dirty: boolean }) {
     content = (
       <span className="savebar__status savebar__status--saved">
         <CircleCheck size={15} aria-hidden="true" />
-        Saved locally Â· {when}
+        Saved locally · {when}
       </span>
     )
   } else {

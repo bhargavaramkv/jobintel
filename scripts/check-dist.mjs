@@ -41,6 +41,11 @@ for (const file of walk(DIST)) {
       failures++
     }
   }
+  // UTF-8 text that was decoded as Windows-1252 and re-saved (e.g. "â€¦", "Â·").
+  if (/â€|Â[·°©®]/.test(text)) {
+    console.error(`✖ Mis-encoded (mojibake) characters in ${file}`)
+    failures++
+  }
   if (file.endsWith('.map')) {
     console.error(`✖ Source map shipped: ${file}`)
     failures++
