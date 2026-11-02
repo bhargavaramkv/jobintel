@@ -73,6 +73,8 @@ export const feedSchema = z.object({
   generatedAt: z.string(),
   /** Last scan in which at least one source succeeded. */
   lastSuccessfulScanAt: z.string().optional(),
+  /** Cities the collector was limited to. Absent or empty = anywhere in India. */
+  cityScope: z.array(z.enum(CITY_VALUES)).optional(),
   jobs: z.array(jobSchema),
   sources: z.array(sourceHealthSchema),
 })

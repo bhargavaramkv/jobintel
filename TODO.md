@@ -26,16 +26,16 @@
 
 - [x] Public feed contract shared by collector and app (`src/domain/jobs/feedSchema.ts`, Zod-validated on write and read)
 - [x] Collector (`collector/`): Greenhouse, Lever and Ashby public posting APIs, no dependencies beyond Zod
-- [x] Source registry `collector/sources.json`: 47 boards verified on 2026-11-02 to list engineering roles in India
+- [x] Source registry `collector/sources.json`: 43 boards verified on 2026-11-02 to list engineering roles in Bengaluru or Hyderabad
 - [x] Normalization: title, company, published locations → city, remote-India, work mode, department, plain-text description, requirement bullets, original URL, source id, posted / first-seen / last-verified timestamps
-- [x] Feed keeps India-based software-engineering titles only (`collector/config.json`)
+- [x] Feed keeps software-engineering titles in **Bengaluru and Hyderabad only**. The `cities` list in `collector/config.json` sets this scope, and city-less remote-India roles are excluded.
 - [x] De-duplication by stable source id, then by company + title + location
 - [x] Closed detection: a job missing from a healthy source is marked closed, then dropped after 14 days
 - [x] A failing source never fails the scan and never closes its jobs. If every source fails, nothing is written.
 - [x] Source health and last-successful-scan metadata in the feed and the UI
 - [x] `scan.yml`: three scans a day (07:43, 13:43, 19:43 IST) plus manual dispatch. It commits the feed, then deploys via `pages.yml`.
 - [x] Job Discovery page: search, city/remote/work-mode/company/date filters, sort, details, closed toggle, source table
-- [x] Optional filter by the profile's stated locations, work modes and excluded titles (filtering only; no scoring)
+- [x] Optional filter by the profile's stated locations, work modes and excluded titles (filtering only; no scoring). Accepting the remote work mode doesn't widen the location; only a location like "Remote India" does.
 - [x] Dashboard: real "New Jobs" count (first seen in the last 3 days) and the newest fitting jobs
 - [x] `check:dist` also fails if a candidate-profile field ever appears in `data/`
 

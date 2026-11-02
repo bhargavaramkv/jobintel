@@ -42,7 +42,7 @@ implemented yet. See
 
 `collector/` runs in GitHub Actions three times a day. It reads the public posting APIs of the
 boards in [`collector/sources.json`](collector/sources.json) (Greenhouse, Lever, Ashby), keeps
-India-based engineering roles, and writes `public/data/jobs.json`. The app fetches that static
+engineering roles in Bengaluru and Hyderabad (the `cities` list in `collector/config.json`), and writes `public/data/jobs.json`. The app fetches that static
 file from the same origin and filters it in the browser. Your profile is never sent anywhere, and
 the feed contains only public posting facts. Note that the list of tracked companies is public.
 

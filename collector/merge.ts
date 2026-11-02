@@ -1,4 +1,4 @@
-import type { Job, JobFeed, SourceHealth } from '../src/domain/jobs/feedSchema.ts'
+import type { City, Job, JobFeed, SourceHealth } from '../src/domain/jobs/feedSchema.ts'
 import { FEED_FORMAT_VERSION } from '../src/domain/jobs/feedSchema.ts'
 import type { RawJob, SourceConfig } from './adapters.ts'
 import { classifyLocations, normalizeWorkMode } from './location.ts'
@@ -17,15 +17,19 @@ export interface SourceResult {
 export interface MergeOptions {
   now: Date
   keepTitle: (title: string) => boolean
+  /** Keep only jobs located in at least one of these cities. Empty = any city in India. */
+  cities: readonly City[]
   maxDescriptionChars: number
   closedRetentionDays: number
 }
 
-/** Turn a raw posting into a feed job, or null if it is outside India or not an engineering role. */
+/** Turn a raw posting into a feed job, or null if it is outside the configured cities or not an engineering role. */
 export function toJob(source: SourceConfig, raw: RawJob, opts: MergeOptions): Omit<Job, 'firstSeenAt' | 'lastVerifiedAt' | 'status'> | null {
   if (!opts.keepTitle(raw.title)) return null
   const loc = classifyLocations(raw.locations)
   if (!loc.inIndia) return null
+  // City scope: a remote-India listing with no named city is outside a city-scoped feed.
+  if (opts.cities.length && !loc.cities.some((c) => opts.cities.includes(c))) return null
   const key = sourceKey(source)
   return {
     id: `${key}:${raw.sourceId}`,
@@ -108,6 +112,8 @@ export function mergeFeed(previous: JobFeed | null, results: SourceResult[], opt
     if (out.has(prev.id)) continue
     // Source removed from the registry: drop its jobs.
     if (!configuredKeys.has(prev.sourceKey)) continue
+    // Outside the current city scope (e.g. scope was narrowed): drop, don't mark closed.
+    if (opts.cities.length && !prev.cities.some((c) => opts.cities.includes(c))) continue
     if (!okKeys.has(prev.sourceKey)) {
       out.set(prev.id, prev) // source failed: keep last known state
       continue
@@ -136,6 +142,7 @@ export function mergeFeed(previous: JobFeed | null, results: SourceResult[], opt
     formatVersion: FEED_FORMAT_VERSION,
     generatedAt: now,
     lastSuccessfulScanAt: okKeys.size > 0 ? now : previous?.lastSuccessfulScanAt,
+    ...(opts.cities.length ? { cityScope: [...opts.cities] } : {}),
     jobs,
     sources: sources.sort((a, b) => a.company.localeCompare(b.company)),
   }

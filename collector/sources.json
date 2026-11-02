@@ -1,20 +1,10 @@
 {
-  "$comment": "Public job boards to scan. Each entry was verified to list engineering roles in India on 2026-11-02. Add/remove entries freely; use `node collector/probe.ts <ats>:<board>` to check a board first.",
+  "$comment": "Public job boards to scan. Each entry was verified on 2026-11-02 to list engineering roles in Bengaluru or Hyderabad. Check a board first with `node collector/probe.ts <ats>:<board>`.",
   "sources": [
-    {
-      "company": "Agoda",
-      "ats": "greenhouse",
-      "board": "agoda"
-    },
     {
       "company": "Airbnb",
       "ats": "greenhouse",
       "board": "airbnb"
-    },
-    {
-      "company": "Anaplan",
-      "ats": "greenhouse",
-      "board": "anaplan"
     },
     {
       "company": "Celonis",
@@ -22,14 +12,9 @@
       "board": "celonis"
     },
     {
-      "company": "Cloudflare",
+      "company": "CloudSEK",
       "ats": "greenhouse",
-      "board": "cloudflare"
-    },
-    {
-      "company": "Coinbase",
-      "ats": "greenhouse",
-      "board": "coinbase"
+      "board": "cloudsek"
     },
     {
       "company": "Commvault",
@@ -112,6 +97,11 @@
       "board": "rubrik"
     },
     {
+      "company": "Salesloft",
+      "ats": "greenhouse",
+      "board": "salesloft"
+    },
+    {
       "company": "Samsara",
       "ats": "greenhouse",
       "board": "samsara"
@@ -127,34 +117,19 @@
       "board": "singlestore"
     },
     {
-      "company": "Starburst",
-      "ats": "greenhouse",
-      "board": "starburst"
-    },
-    {
       "company": "Stripe",
       "ats": "greenhouse",
       "board": "stripe"
     },
     {
-      "company": "Sumo Logic",
+      "company": "Tide",
       "ats": "greenhouse",
-      "board": "sumologic"
+      "board": "tide"
     },
     {
       "company": "Toast",
       "ats": "greenhouse",
       "board": "toast"
-    },
-    {
-      "company": "Twilio",
-      "ats": "greenhouse",
-      "board": "twilio"
-    },
-    {
-      "company": "YugabyteDB",
-      "ats": "greenhouse",
-      "board": "yugabyte"
     },
     {
       "company": "Zenoti",
@@ -197,6 +172,11 @@
       "board": "mindtickle"
     },
     {
+      "company": "Outreach",
+      "ats": "lever",
+      "board": "outreach"
+    },
+    {
       "company": "Paytm",
       "ats": "lever",
       "board": "paytm"
@@ -207,9 +187,9 @@
       "board": "zeta"
     },
     {
-      "company": "ClickHouse",
+      "company": "Gainsight",
       "ats": "ashby",
-      "board": "clickhouse"
+      "board": "gainsight"
     },
     {
       "company": "Kong",
@@ -222,14 +202,14 @@
       "board": "openai"
     },
     {
-      "company": "Plane",
-      "ats": "ashby",
-      "board": "plane"
-    },
-    {
       "company": "Sarvam AI",
       "ats": "ashby",
       "board": "sarvam"
+    },
+    {
+      "company": "SpotDraft",
+      "ats": "ashby",
+      "board": "spotdraft"
     },
     {
       "company": "Tekion",

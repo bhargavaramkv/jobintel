@@ -30,7 +30,10 @@ export const DEFAULT_FILTERS: JobFilters = {
 
 export interface ProfilePreferences {
   cities: City[]
-  /** Profile lists a location mentioning "remote". */
+  /**
+   * Profile lists a location mentioning "remote" (e.g. "Remote India"). Accepting the remote
+   * WORK MODE is not enough: it says how you work, not that any location is fine.
+   */
   wantsRemote: boolean
   workModes: WorkMode[]
   excludedTitles: string[]
@@ -41,7 +44,7 @@ export interface ProfilePreferences {
 export function preferencesFromProfile(p: CandidateProfile | null): ProfilePreferences {
   if (!p) return { cities: [], wantsRemote: false, workModes: [], excludedTitles: [], active: false }
   const cities = [...new Set(p.preferredLocations.flatMap(citiesIn))]
-  const wantsRemote = p.workModes.includes('remote') || p.preferredLocations.some((l) => /\bremote\b/i.test(l))
+  const wantsRemote = p.preferredLocations.some((l) => /\bremote\b/i.test(l))
   const excludedTitles = p.excludedTitles.map((t) => t.toLowerCase())
   const active = cities.length > 0 || (p.workModes.length > 0 && p.workModes.length < 3) || excludedTitles.length > 0
   return { cities, wantsRemote, workModes: p.workModes, excludedTitles, active }
@@ -58,10 +61,7 @@ export function fitsPreferences(job: Job, prefs: ProfilePreferences): boolean {
   }
 
   const modes = prefs.workModes
-  if (modes.length > 0 && modes.length < 3 && job.workMode !== 'unknown' && !modes.includes(job.workMode)) {
-    // A remote-India job still fits someone who only listed it via a "Remote" location.
-    if (!(job.workMode === 'remote' && prefs.wantsRemote)) return false
-  }
+  if (modes.length > 0 && modes.length < 3 && job.workMode !== 'unknown' && !modes.includes(job.workMode)) return false
   return true
 }
 

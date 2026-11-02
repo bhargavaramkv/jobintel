@@ -160,11 +160,35 @@ const opts = (iso: string): MergeOptions => ({
   keepTitle: makeTitleFilter(config.titleFilter),
   maxDescriptionChars: 100,
   closedRetentionDays: 14,
+  cities: ['Bengaluru', 'Hyderabad'],
 })
 const ok = (source: SourceConfig, jobs: RawJob[]): SourceResult => ({ source, ok: true, raw: jobs, durationMs: 5 })
 const fail = (source: SourceConfig): SourceResult => ({ source, ok: false, raw: [], error: 'HTTP 500', durationMs: 5 })
 
 describe('mergeFeed', () => {
+  it('keeps only Bengaluru/Hyderabad jobs, dropping other cities and city-less remote India', () => {
+    const feed = mergeFeed(
+      null,
+      [ok(sourceA, [raw('1'), raw('2', 'Backend Engineer', ['Pune, India']), raw('3', 'SDE', ['Remote - India']), raw('4', 'SDE II', ['Hyderabad', 'Remote - India'])])],
+      opts('2026-11-01T00:00:00Z'),
+    )
+    expect(feed.jobs.map((j) => j.sourceId).sort()).toEqual(['1', '4'])
+    expect(feed.cityScope).toEqual(['Bengaluru', 'Hyderabad'])
+  })
+
+  it('drops (not closes) previous jobs that fall outside a narrowed city scope', () => {
+    const wide = mergeFeed(null, [ok(sourceA, [raw('1'), raw('2', 'Backend Engineer', ['Pune, India'])])], { ...opts('2026-11-01T00:00:00Z'), cities: [] })
+    const narrow = mergeFeed(wide, [ok(sourceA, [raw('1'), raw('2', 'Backend Engineer', ['Pune, India'])])], opts('2026-11-02T00:00:00Z'))
+    expect(narrow.jobs.map((j) => [j.sourceId, j.status])).toEqual([['1', 'open']])
+    const failed = mergeFeed(wide, [fail(sourceA)], opts('2026-11-02T00:00:00Z'))
+    expect(failed.jobs.map((j) => j.sourceId)).toEqual(['1'])
+  })
+
+  it('keeps any Indian city when no city scope is configured', () => {
+    const feed = mergeFeed(null, [ok(sourceA, [raw('2', 'Backend Engineer', ['Pune, India'])])], { ...opts('2026-11-01T00:00:00Z'), cities: [] })
+    expect(feed.jobs).toHaveLength(1)
+  })
+
   it('keeps only India engineering jobs and produces a valid feed', () => {
     const feed = mergeFeed(null, [ok(sourceA, [raw('1'), raw('2', 'Recruiter'), raw('3', 'Software Engineer', ['Berlin'])])], opts('2026-11-01T00:00:00Z'))
     expect(feed.jobs.map((j) => j.sourceId)).toEqual(['1'])

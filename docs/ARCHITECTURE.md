@@ -78,7 +78,7 @@ name) do not count.
 
 ```
 scan.yml (cron 3x/day, manual) ──► collector/run.ts ──► Greenhouse / Lever / Ashby public APIs
-        │                               │  parse → filter (India + eng titles) → merge with previous feed
+        │                               │  parse → filter (Bengaluru/Hyderabad + eng titles) → merge with previous feed
         │                               ▼
         │                      public/data/jobs.json  (committed by github-actions[bot])
         └──► pages.yml (workflow_call) ──► verify + build + deploy to Pages

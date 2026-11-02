@@ -1,5 +1,6 @@
 {
-  "$comment": "Public, non-secret collector settings. Only India-based postings with engineering titles are kept; the browser filters further using the local profile.",
+  "$comment": "Public, non-secret collector settings. Only postings in the listed cities with engineering titles are kept; the browser filters further using the local profile. Empty cities = anywhere in India.",
+  "cities": ["Bengaluru", "Hyderabad"],
   "titleFilter": {
     "include": [
       "engineer",

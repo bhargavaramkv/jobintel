@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import { ATS_KINDS, feedSchema, type JobFeed } from '../src/domain/jobs/feedSchema.ts'
+import { ATS_KINDS, CITY_VALUES, feedSchema, type JobFeed } from '../src/domain/jobs/feedSchema.ts'
 import { fetchSource, type SourceConfig } from './adapters.ts'
 import { makeTitleFilter } from './filter.ts'
 import { mergeFeed, type SourceResult } from './merge.ts'
@@ -20,6 +20,7 @@ const configSchema = z.object({
   titleFilter: z.object({ include: z.array(z.string()).min(1), exclude: z.array(z.string()) }),
   maxDescriptionChars: z.number().int().positive(),
   closedRetentionDays: z.number().int().nonnegative(),
+  cities: z.array(z.enum(CITY_VALUES)),
   requestTimeoutMs: z.number().int().positive(),
   concurrency: z.number().int().positive(),
 })
@@ -148,6 +149,7 @@ async function main() {
     keepTitle: makeTitleFilter(config.titleFilter),
     maxDescriptionChars: config.maxDescriptionChars,
     closedRetentionDays: config.closedRetentionDays,
+    cities: config.cities,
   })
   feedSchema.parse(feed) // never publish an invalid feed
 

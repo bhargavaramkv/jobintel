@@ -39,14 +39,15 @@ describe('fitsPreferences', () => {
     makeProfile({ preferredLocations: ['Bengaluru', 'Hyderabad'], workModes: ['onsite', 'hybrid', 'remote'] }),
   )
 
-  it('keeps preferred cities and remote-India when remote is accepted', () => {
-    expect([blr, hyd, remote].every((j) => fitsPreferences(j, prefs))).toBe(true)
+  it('keeps only preferred cities, even when the remote work mode is accepted', () => {
+    expect([blr, hyd].every((j) => fitsPreferences(j, prefs))).toBe(true)
     expect(fitsPreferences(pune, prefs)).toBe(false)
+    expect(fitsPreferences(remote, prefs)).toBe(false) // remote India with no Bengaluru/Hyderabad
   })
 
-  it('excludes remote-India when remote is not accepted', () => {
-    const p = preferencesFromProfile(makeProfile({ preferredLocations: ['Bengaluru'], workModes: ['onsite'] }))
-    expect(fitsPreferences(remote, p)).toBe(false)
+  it('keeps city-less remote-India jobs only when a location explicitly says remote', () => {
+    const p = preferencesFromProfile(makeProfile({ preferredLocations: ['Bengaluru', 'Remote India'] }))
+    expect(fitsPreferences(remote, p)).toBe(true)
   })
 
   it('keeps jobs with an unknown work mode instead of guessing', () => {
