@@ -1,4 +1,4 @@
-import { CornerDownLeft, LayoutDashboard, Search, UserRound } from 'lucide-react'
+import { CornerDownLeft, LayoutDashboard, Radar, Search, UserRound } from 'lucide-react'
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PROFILE_SECTIONS } from '../../app/navigation'
@@ -12,9 +12,10 @@ interface Command {
   keywords?: string
 }
 
-/** Only implemented destinations and actions. No job search in Phase 1. */
+/** Only implemented destinations. Searching jobs happens on the Job Discovery page. */
 const COMMANDS: Command[] = [
   { id: 'go-dashboard', label: 'Go to Dashboard', group: 'Navigate', to: '/', keywords: 'home overview' },
+  { id: 'go-jobs', label: 'Go to Job Discovery', group: 'Navigate', to: '/jobs', keywords: 'jobs openings feed search' },
   { id: 'go-profile', label: 'Go to Profile & Preferences', group: 'Navigate', to: '/profile', keywords: 'settings' },
   ...PROFILE_SECTIONS.map((s) => ({
     id: `profile-${s.id}`,
@@ -99,11 +100,11 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
         <ul id={listId} className="palette__list" role="listbox" aria-label="Commands">
           {results.length === 0 && (
             <li className="palette__empty">
-              No matching command. Job search arrives in Phase 2.
+              No matching command.
             </li>
           )}
           {results.map((cmd, i) => {
-            const Icon = cmd.to === '/' ? LayoutDashboard : UserRound
+            const Icon = cmd.to === '/' ? LayoutDashboard : cmd.to === '/jobs' ? Radar : UserRound
             return (
               <li
                 key={cmd.id}

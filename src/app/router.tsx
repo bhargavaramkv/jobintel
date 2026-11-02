@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate, type RouteObject } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
+import { JobsPage } from '../features/jobs/JobsPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
 
 /**
@@ -13,6 +14,7 @@ export const routes: RouteObject[] = [
     element: <AppShell />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'jobs', element: <JobsPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

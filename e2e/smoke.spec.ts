@@ -17,11 +17,12 @@ async function expectNoHorizontalScroll(page: Page) {
   expect(overflow).toBeLessThanOrEqual(1)
 }
 
-test('dashboard loads under the project base path with honest empty states', async ({ page }) => {
+test('dashboard loads under the project base path with the published feed', async ({ page }) => {
   const external = trackExternalRequests(page)
   await page.goto('./')
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })).toBeVisible()
-  await expect(page.getByText('Your job feed is not connected yet')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Job Feed', exact: true })).toBeVisible()
+  await expect(page.getByText(/Discovery (active|feed is stale)/)).toBeVisible()
   await expect(page.getByTestId('readiness-score')).toHaveText('0%')
   await expectNoHorizontalScroll(page)
   expect(external).toEqual([])
@@ -96,7 +97,26 @@ test('encrypted backup exports, and restores after clearing data', async ({ page
 
 test('unknown hash routes fall back to the dashboard', async ({ page }) => {
   await page.goto('./#/does-not-exist')
-  await expect(page.getByText('Your job feed is not connected yet')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Job Feed', exact: true })).toBeVisible()
+})
+
+test('job discovery lists public jobs from the same origin and filters in the browser', async ({ page }) => {
+  const external = trackExternalRequests(page)
+  const feedRequests: string[] = []
+  page.on('request', (r) => r.url().includes('/data/') && feedRequests.push(r.url()))
+  await page.goto('./#/jobs')
+  await expect(page.getByRole('heading', { name: 'Job Discovery' })).toBeVisible()
+  await expect(page.getByTestId('result-count')).toContainText(/Showing \d+ of \d+/)
+  const first = page.locator('article.job').first()
+  await expect(first.getByRole('link').first()).toHaveAttribute('target', '_blank')
+  await first.getByRole('button', { name: /Details/ }).click()
+  await expect(first.getByText('Description excerpt')).toBeVisible()
+  await page.getByRole('searchbox', { name: 'Search jobs' }).fill('zzzz-no-such-job')
+  await expect(page.getByText('No jobs match these filters')).toBeVisible()
+  await expectNoHorizontalScroll(page)
+  // Only the static feed is fetched, with no query string carrying user data.
+  expect(feedRequests.every((u) => u.endsWith('/jobintel/data/jobs.json'))).toBe(true)
+  expect(external).toEqual([])
 })
 
 test('uses the dark blue/cyan theme with no purple accent', async ({ page }) => {

@@ -1,4 +1,4 @@
-# JobIntel architecture (v0.1 / Phase 1)
+# JobIntel architecture (v0.1 / Phases 1–2)
 
 ## Decisions
 
@@ -74,8 +74,33 @@ The score is a fixed weighted checklist that sums to 100:
 Optional preferences (target companies, compensation, notice period, excluded titles, display
 name) do not count.
 
+## Job discovery (Phase 2)
+
+```
+scan.yml (cron 3x/day, manual) ──► collector/run.ts ──► Greenhouse / Lever / Ashby public APIs
+        │                               │  parse → filter (India + eng titles) → merge with previous feed
+        │                               ▼
+        │                      public/data/jobs.json  (committed by github-actions[bot])
+        └──► pages.yml (workflow_call) ──► verify + build + deploy to Pages
+Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate → filter locally
+```
+
+- **Contract:** `src/domain/jobs/feedSchema.ts` is imported by both sides. The collector validates
+  before writing, and the app validates after reading.
+- **Isolation:** each source is fetched with a timeout and one retry. A failure only marks that
+  source as `error` and keeps its last-known jobs open. If every source fails, the run exits
+  non-zero without writing.
+- **Lifecycle:** `firstSeenAt` is kept across scans and `lastVerifiedAt` is updated each time a
+  job is seen. A job missing from a healthy source is marked `closed` and pruned after
+  `closedRetentionDays`.
+- **Duplicates:** the primary key is `ats:board:sourceId`. The secondary key is normalised
+  company + title + city set.
+- **Deployment:** a push made with `GITHUB_TOKEN` doesn't trigger workflows, so `scan.yml`
+  calls `pages.yml` itself with `ref: main` to build the commit it just made.
+- **Privacy:** the collector never reads profile data. `check:dist` fails if profile field names
+  appear under `data/`. The app's profile filter (locations, work modes, excluded titles) runs
+  only in the browser.
+
 ## Future phases (not implemented)
 
-Phase 2+ will add a scheduled GitHub Actions collector. It will publish a **public-only**
-`public/data/jobs.json`, and the browser will match it against the local profile. The profile
-never leaves the browser. See `IMPLEMENTATION_PLAN.md` §2.3 and §7.
+Phase 3 will rank feed jobs against the local profile in the browser, with explained scores. See `IMPLEMENTATION_PLAN.md` §2.3 and §7.

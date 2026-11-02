@@ -1,0 +1,240 @@
+{
+  "$comment": "Public job boards to scan. Each entry was verified to list engineering roles in India on 2026-11-02. Add/remove entries freely; use `node collector/probe.ts <ats>:<board>` to check a board first.",
+  "sources": [
+    {
+      "company": "Agoda",
+      "ats": "greenhouse",
+      "board": "agoda"
+    },
+    {
+      "company": "Airbnb",
+      "ats": "greenhouse",
+      "board": "airbnb"
+    },
+    {
+      "company": "Anaplan",
+      "ats": "greenhouse",
+      "board": "anaplan"
+    },
+    {
+      "company": "Celonis",
+      "ats": "greenhouse",
+      "board": "celonis"
+    },
+    {
+      "company": "Cloudflare",
+      "ats": "greenhouse",
+      "board": "cloudflare"
+    },
+    {
+      "company": "Coinbase",
+      "ats": "greenhouse",
+      "board": "coinbase"
+    },
+    {
+      "company": "Commvault",
+      "ats": "greenhouse",
+      "board": "commvault"
+    },
+    {
+      "company": "Databricks",
+      "ats": "greenhouse",
+      "board": "databricks"
+    },
+    {
+      "company": "Druva",
+      "ats": "greenhouse",
+      "board": "druva"
+    },
+    {
+      "company": "Elastic",
+      "ats": "greenhouse",
+      "board": "elastic"
+    },
+    {
+      "company": "Fivetran",
+      "ats": "greenhouse",
+      "board": "fivetran"
+    },
+    {
+      "company": "GitLab",
+      "ats": "greenhouse",
+      "board": "gitlab"
+    },
+    {
+      "company": "Glance",
+      "ats": "greenhouse",
+      "board": "glance"
+    },
+    {
+      "company": "HackerRank",
+      "ats": "greenhouse",
+      "board": "hackerrank"
+    },
+    {
+      "company": "Harness",
+      "ats": "greenhouse",
+      "board": "harnessinc"
+    },
+    {
+      "company": "InMobi",
+      "ats": "greenhouse",
+      "board": "inmobi"
+    },
+    {
+      "company": "MongoDB",
+      "ats": "greenhouse",
+      "board": "mongodb"
+    },
+    {
+      "company": "Netskope",
+      "ats": "greenhouse",
+      "board": "netskope"
+    },
+    {
+      "company": "New Relic",
+      "ats": "greenhouse",
+      "board": "newrelic"
+    },
+    {
+      "company": "Okta",
+      "ats": "greenhouse",
+      "board": "okta"
+    },
+    {
+      "company": "Pure Storage",
+      "ats": "greenhouse",
+      "board": "purestorage"
+    },
+    {
+      "company": "Rubrik",
+      "ats": "greenhouse",
+      "board": "rubrik"
+    },
+    {
+      "company": "Samsara",
+      "ats": "greenhouse",
+      "board": "samsara"
+    },
+    {
+      "company": "Sigmoid",
+      "ats": "greenhouse",
+      "board": "sigmoid"
+    },
+    {
+      "company": "SingleStore",
+      "ats": "greenhouse",
+      "board": "singlestore"
+    },
+    {
+      "company": "Starburst",
+      "ats": "greenhouse",
+      "board": "starburst"
+    },
+    {
+      "company": "Stripe",
+      "ats": "greenhouse",
+      "board": "stripe"
+    },
+    {
+      "company": "Sumo Logic",
+      "ats": "greenhouse",
+      "board": "sumologic"
+    },
+    {
+      "company": "Toast",
+      "ats": "greenhouse",
+      "board": "toast"
+    },
+    {
+      "company": "Twilio",
+      "ats": "greenhouse",
+      "board": "twilio"
+    },
+    {
+      "company": "YugabyteDB",
+      "ats": "greenhouse",
+      "board": "yugabyte"
+    },
+    {
+      "company": "Zenoti",
+      "ats": "greenhouse",
+      "board": "zenoti"
+    },
+    {
+      "company": "Zeta Global",
+      "ats": "greenhouse",
+      "board": "zetaglobal"
+    },
+    {
+      "company": "Zscaler",
+      "ats": "greenhouse",
+      "board": "zscaler"
+    },
+    {
+      "company": "CRED",
+      "ats": "lever",
+      "board": "cred"
+    },
+    {
+      "company": "FamPay",
+      "ats": "lever",
+      "board": "fampay"
+    },
+    {
+      "company": "Hevo Data",
+      "ats": "lever",
+      "board": "hevodata"
+    },
+    {
+      "company": "Meesho",
+      "ats": "lever",
+      "board": "meesho"
+    },
+    {
+      "company": "Mindtickle",
+      "ats": "lever",
+      "board": "mindtickle"
+    },
+    {
+      "company": "Paytm",
+      "ats": "lever",
+      "board": "paytm"
+    },
+    {
+      "company": "Zeta",
+      "ats": "lever",
+      "board": "zeta"
+    },
+    {
+      "company": "ClickHouse",
+      "ats": "ashby",
+      "board": "clickhouse"
+    },
+    {
+      "company": "Kong",
+      "ats": "ashby",
+      "board": "kong"
+    },
+    {
+      "company": "OpenAI",
+      "ats": "ashby",
+      "board": "openai"
+    },
+    {
+      "company": "Plane",
+      "ats": "ashby",
+      "board": "plane"
+    },
+    {
+      "company": "Sarvam AI",
+      "ats": "ashby",
+      "board": "sarvam"
+    },
+    {
+      "company": "Tekion",
+      "ats": "ashby",
+      "board": "tekion"
+    }
+  ]
+}

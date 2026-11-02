@@ -5,19 +5,31 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Called by scan.yml after it commits a refreshed job feed.
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build
+        type: string
+        required: false
+        default: main
 
 permissions:
   contents: read
 
 concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
+  # PRs cancel their own superseded runs; deploys to main queue instead of cancelling.
+  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Scan runs build the commit they just pushed, not the triggering SHA.
+          ref: ${{ inputs.ref || github.ref }}
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -37,7 +49,7 @@ jobs:
           path: dist
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || inputs.ref == 'main')
     needs: verify
     runs-on: ubuntu-latest
     permissions:

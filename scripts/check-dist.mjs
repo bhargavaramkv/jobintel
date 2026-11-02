@@ -35,15 +35,22 @@ for (const file of walk(DIST)) {
   if (!/\.(html|js|css|json|txt|svg|map)$/.test(file)) continue
   files++
   const text = readFileSync(file, 'utf8')
-  for (const [re, label] of [...SECRET_PATTERNS, ...TRACKER_PATTERNS]) {
+  // data/*.json is third-party job posting text: scan it for secrets, but not for
+  // tracker names or mojibake that a company may legitimately have written.
+  const isData = /[\\/]data[\\/]/.test(file)
+  for (const [re, label] of isData ? SECRET_PATTERNS : [...SECRET_PATTERNS, ...TRACKER_PATTERNS]) {
     if (re.test(text)) {
       console.error(`✖ ${label} pattern found in ${file}`)
       failures++
     }
   }
   // UTF-8 text that was decoded as Windows-1252 and re-saved (e.g. "â€¦", "Â·").
-  if (/â€|Â[·°©®]/.test(text)) {
+  if (!isData && /â€|Â[·°©®]/.test(text)) {
     console.error(`✖ Mis-encoded (mojibake) characters in ${file}`)
+    failures++
+  }
+  if (isData && /"(primarySkills|professionalSummary|displayName|noticePeriod|compensation)"/.test(text)) {
+    console.error(`✖ Candidate profile field found in public data: ${file}`)
     failures++
   }
   if (file.endsWith('.map')) {
