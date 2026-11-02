@@ -17,7 +17,7 @@ export const ROADMAP = [
   {
     phase: 6,
     label: 'Application tracking',
-    done: false,
+    done: true,
     blurb: 'Track every application through interviews and offers, with status history and follow-ups.',
   },
   { phase: 7, label: 'Scheduled scans & reminders', done: false, blurb: 'Reminders for due follow-ups while the app is open.' },

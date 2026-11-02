@@ -3,7 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.4. Phases 1–5 (app shell + local profile, job discovery, matching, referral leads, outreach) are done. See
+**Status:** v0.5. Phases 1–6 (app shell + local profile, job discovery, matching, referral leads, outreach, application tracking) are done. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -71,6 +71,13 @@ follows the evidence: a referral is asked for only when you confirmed you know t
 otherwise the draft asks for advice. Every draft lists the facts it used, and you can edit it. JobIntel never
 sends anything: copy the text, send it yourself, then press *I sent it* to log it. Follow-ups are suggested at
 most twice, a week apart, and stop when the person replies.
+
+## Application tracking (Phase 6)
+
+*Applications* follows every job you pursue from shortlist through referral, application, interviews and
+outcome. Each stage change is kept in a history. Record next actions, follow-up dates, interviews, the resume
+version you used, linked referral contacts and feedback. You can add jobs you found elsewhere, and JobIntel
+stops you from tracking the same company and title twice by accident.
 
 ## Applied tracking and feedback
 

@@ -1,0 +1,133 @@
+.applications {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.pipe {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-2);
+}
+
+.pipe__step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.pipe__step:hover {
+  background: var(--surface-hover);
+}
+
+.pipe__step.is-empty {
+  color: var(--text-muted);
+}
+
+.pipe__n {
+  font-size: 1.25rem;
+}
+
+.pipe__label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.attention {
+  list-style: none;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.stage__title {
+  font-size: var(--text-base);
+  margin: 0 0 var(--space-3);
+}
+
+.apps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.app__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.app__manual {
+  margin-left: var(--space-2);
+}
+
+.app__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.app__next {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.app__next.is-due {
+  color: var(--warning);
+}
+
+.app__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.timeline {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app__editor {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.interview {
+  display: grid;
+  grid-template-columns: 150px 170px 130px 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  .interview {
+    grid-template-columns: 1fr 1fr;
+  }
+}

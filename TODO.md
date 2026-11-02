@@ -109,7 +109,19 @@
 
 - Drafts are templates, not AI-written text. Edit them so they sound like you.
 - Replies are logged by hand; JobIntel can't see your inbox.
-## Phase 6: application management (partly done: applied date + notes; interview/offer stages, status history and follow-ups not started)
+## Phase 6: application management ✅
+
+- [x] Applications page (`#/applications`) with a pipeline summary: Shortlisted → Referral requested → Referred → Applied → Interviewing → Offer / Rejected by company / Withdrawn
+- [x] Stage changes append to a status history (never rewritten); a timeline per application
+- [x] Per application: applied date, next action, follow-up date, resume version label, linked referral contacts, interviews (date, type, outcome, note), rejection/feedback notes
+- [x] "Needs attention": overdue follow-ups and upcoming interviews; counted in the dashboard Follow-ups KPI
+- [x] Manual applications for jobs outside the feed (`manual:` ids)
+- [x] Duplicate prevention: one record per job id, and an active application with the same company + title (case/brackets ignored) blocks a manual entry and asks before shortlisting/applying to a reposted job
+- [x] Applications live in the existing `jobActions` records (new optional fields), so they're in encrypted backups and old records still validate (legacy "applied" counts as the Applied stage)
+
+### Known limitations
+
+- Resume files aren't stored, only a version label.
 ## Phase 7: scheduled automation (scheduled scan done in Phase 2; reminders/notifications not started)
 ## Phase 8: analytics (not started)
 ## Phase 9: reliability & polish (not started)

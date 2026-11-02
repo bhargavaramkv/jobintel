@@ -145,3 +145,13 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
   the follow-up limit (2, a week apart, none after a reply).
 - `src/features/shared/recordContext.tsx` is a generic provider/hook over a `recordStore`, used by contacts and
   outreach.
+
+## Applications (Phase 6)
+
+- No new store: `jobActions` records gained optional `stage`, `history`, `interviews`, `nextAction`,
+  `followUpOn`, `resumeVersion`, `contactIds` and `feedback`. `withStage()` appends a history event and keeps
+  `decision`/`appliedOn` consistent (submitted stages mark the job applied). `stageOf()` treats legacy applied
+  records as Applied.
+- `src/domain/applications/pipeline.ts`: grouping, due follow-ups, upcoming interviews and `findDuplicate()`
+  (normalised company + title among active applications).
+- Manual applications use `manual:<uuid>` ids and a snapshot with `ats: 'manual'`.

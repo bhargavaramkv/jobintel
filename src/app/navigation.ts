@@ -19,7 +19,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'discovery', label: 'Job Discovery', shortLabel: 'Jobs', icon: Radar, kind: 'active', path: '/jobs' },
   { id: 'referrals', label: 'Referrals', shortLabel: 'Refs', icon: Users, kind: 'active', path: '/referrals' },
   { id: 'outreach', label: 'Outreach', shortLabel: 'Reach', icon: Send, kind: 'active', path: '/outreach' },
-  { id: 'applications', label: 'Applications', shortLabel: 'Apps', icon: Briefcase, kind: 'planned', phase: 6 },
+  { id: 'applications', label: 'Applications', shortLabel: 'Apps', icon: Briefcase, kind: 'active', path: '/applications' },
   { id: 'analytics', label: 'Analytics', shortLabel: 'Stats', icon: ChartLine, kind: 'planned', phase: 8 },
   { id: 'profile', label: 'Profile & Preferences', shortLabel: 'Profile', icon: UserRound, kind: 'active', path: '/profile' },
 ]

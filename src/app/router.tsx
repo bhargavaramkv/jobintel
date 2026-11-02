@@ -5,6 +5,7 @@ import { JobsPage } from '../features/jobs/JobsPage'
 import { ProfilePage } from '../features/profile/ProfilePage'
 import { ReferralsPage } from '../features/referrals/ReferralsPage'
 import { OutreachPage } from '../features/outreach/OutreachPage'
+import { ApplicationsPage } from '../features/applications/ApplicationsPage'
 
 /**
  * Hash routing keeps deep links working on GitHub Pages project sites,
@@ -19,6 +20,7 @@ export const routes: RouteObject[] = [
       { path: 'jobs', element: <JobsPage /> },
       { path: 'referrals', element: <ReferralsPage /> },
       { path: 'outreach', element: <OutreachPage /> },
+      { path: 'applications', element: <ApplicationsPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

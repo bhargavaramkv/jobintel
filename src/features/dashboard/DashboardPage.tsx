@@ -22,6 +22,7 @@ import { useContacts } from '../referrals/useContacts'
 import { useOutreach } from '../outreach/outreachContext'
 import { followUpState } from '../../domain/outreach/drafts'
 import { threadOf } from '../../domain/outreach/messages'
+import { dueApplicationFollowUps } from '../../domain/applications/pipeline'
 import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
 import { localDate, stageOf } from '../../domain/jobs/actions'
 import { matchJob, matchRank } from '../../domain/match/score'
@@ -74,8 +75,8 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
       const t = threadOf(messages.values(), c.id)
       const f = followUpState(t.sent, t.replied)
       return !!f.dueOn && f.dueOn <= day
-    }).length
-  }, [contacts, messages, now])
+    }).length + dueApplicationFollowUps(actions.values(), day).length
+  }, [contacts, messages, actions, now])
   const leadCount = useMemo(() => [...contacts.values()].filter((c) => c.status !== 'dismissed').length, [contacts])
   const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
   const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])

@@ -35,8 +35,8 @@ describe('Dashboard', () => {
   it('marks planned areas as unavailable rather than linking to them', async () => {
     renderAt('#/')
     const nav = await screen.findByRole('navigation', { name: 'Primary' })
-    expect(within(nav).getByText(/Applications, planned for Phase 6/)).toBeInTheDocument()
-    expect(within(nav).queryByRole('link', { name: /Applications/ })).toBeNull()
+    expect(within(nav).getByText(/Analytics, planned for Phase 8/)).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: /Analytics/ })).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Referrals' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Job Discovery' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
@@ -411,5 +411,53 @@ describe('Outreach (Phase 5)', () => {
 
     await user.click(screen.getByRole('button', { name: /They replied/ }))
     expect(await screen.findByText(/They replied: continue the conversation/)).toBeInTheDocument()
+  })
+})
+
+describe('Applications (Phase 6)', () => {
+  it('adds a manual application, blocks duplicates, records stage history and details', async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderAt('#/applications')
+    expect(await screen.findByText('No applications yet')).toBeInTheDocument()
+
+    const add = async (title: string) => {
+      await user.click(screen.getByRole('button', { name: /Add application/ }))
+      const d = await screen.findByRole('dialog', { name: 'Add application' })
+      await user.type(within(d).getByLabelText('Job title'), title)
+      await user.type(within(d).getByLabelText('Company'), 'Example Co')
+      await user.type(within(d).getByLabelText('Posting link'), 'https://example.com/jobs/9')
+      await user.click(within(d).getByRole('button', { name: 'Add' }))
+      return d
+    }
+    await add('Backend Engineer')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const app = () => screen.getByRole('heading', { name: /Backend Engineer/ }).closest('article') as HTMLElement
+    expect(within(app()).getByText('added by you')).toBeInTheDocument()
+
+    // Same company + title again is refused.
+    const d = await add('backend engineer')
+    expect(await within(d).findByText(/You already track/)).toBeInTheDocument()
+    await user.click(within(d).getByRole('button', { name: 'Cancel' }))
+
+    await user.selectOptions(within(app()).getByRole('combobox', { name: /Stage for/ }), 'interview')
+    expect(await screen.findByRole('heading', { name: /Interviewing/ })).toBeInTheDocument()
+    await user.click(within(app()).getByRole('button', { name: /History/ }))
+    const timeline = within(app()).getByRole('list', { name: /Status history/ })
+    expect(within(timeline).getByText(/Applied/)).toBeInTheDocument()
+    expect(within(timeline).getByText(/Interviewing/)).toBeInTheDocument()
+
+    await user.click(within(app()).getByRole('button', { name: /Edit details/ }))
+    await user.type(within(app()).getByLabelText(/Next action/), 'Prepare system design')
+    await user.type(within(app()).getByLabelText(/Resume version/), 'backend-v3')
+    await user.click(within(app()).getByRole('button', { name: /Add interview/ }))
+    await user.click(within(app()).getByRole('button', { name: 'Save details' }))
+    expect(await within(app()).findByText(/Next: Prepare system design/)).toBeInTheDocument()
+    expect(within(app()).getByText(/resume: backend-v3/)).toBeInTheDocument()
+    expect(within(app()).getByText(/1 interview/)).toBeInTheDocument()
+
+    unmount()
+    await resetDatabaseConnection()
+    renderAt('#/applications')
+    expect(await screen.findByText(/Next: Prepare system design/)).toBeInTheDocument()
   })
 })

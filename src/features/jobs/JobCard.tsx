@@ -15,6 +15,7 @@ import {
 import type { Assessment } from '../../domain/jobs/feedback'
 import { ATS_LABEL, type Job } from '../../domain/jobs/feedSchema'
 import { relativeTime } from '../../domain/jobs/filters'
+import { findDuplicate } from '../../domain/applications/pipeline'
 import type { MatchResult } from '../../domain/match/score'
 import { MatchBreakdown, MatchPill } from './MatchBreakdown'
 import { useJobActions } from './useJobActions'
@@ -42,7 +43,7 @@ function formatDay(isoDate: string) {
 }
 
 export function JobCard({ job, record, now, isNew = false, assessment, match, similarCount = 0, stale = false }: JobCardProps) {
-  const { markApplied, markRejected, clearDecision, setNote, setAppliedOn, setStage, removeStage } = useJobActions()
+  const { actions, markApplied, markRejected, clearDecision, setNote, setAppliedOn, setStage, removeStage } = useJobActions()
   const [open, setOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -60,6 +61,12 @@ export function JobCard({ job, record, now, isNew = false, assessment, match, si
   const cities = job?.cities ?? s.cities
   const where = [...cities.filter((c) => c !== 'Other India'), ...(job?.remoteIndia ? ['Remote (India)'] : [])]
   const locationText = where.length ? where.join(' · ') : s.locations.join(' · ')
+
+  // Stop accidental duplicates: the same company + title already tracked under another posting.
+  const confirmNotDuplicate = () => {
+    const dup = findDuplicate(actions.values(), s, ref.jobId)
+    return !dup || window.confirm(`You already track "${dup.snapshot.title}" at ${dup.snapshot.company} (${STAGE_LABEL[stageOf(dup)!]}). Track this posting too?`)
+  }
 
   const run = async (fn: () => Promise<void>, message: string) => {
     setBusy(true)
@@ -185,7 +192,7 @@ export function JobCard({ job, record, now, isNew = false, assessment, match, si
                 className="btn btn--ghost btn--sm"
                 disabled={busy}
                 aria-pressed="false"
-                onClick={() => run(() => setStage(ref, 'shortlisted'), `Shortlisted ${s.title}`)}
+                onClick={() => confirmNotDuplicate() && run(() => setStage(ref, 'shortlisted'), `Shortlisted ${s.title}`)}
               >
                 <Bookmark size={14} aria-hidden="true" /> Shortlist
               </button>
@@ -194,7 +201,7 @@ export function JobCard({ job, record, now, isNew = false, assessment, match, si
               type="button"
               className="btn btn--secondary btn--sm"
               disabled={busy}
-              onClick={() => run(() => markApplied(ref), `Marked ${s.title} as applied`)}
+              onClick={() => (preApplied || confirmNotDuplicate()) && run(() => markApplied(ref), `Marked ${s.title} as applied`)}
             >
               <Check size={14} aria-hidden="true" /> Mark applied
             </button>
