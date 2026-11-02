@@ -35,8 +35,8 @@ describe('Dashboard', () => {
   it('marks planned areas as unavailable rather than linking to them', async () => {
     renderAt('#/')
     const nav = await screen.findByRole('navigation', { name: 'Primary' })
-    expect(within(nav).getByText(/Outreach, planned for Phase 5/)).toBeInTheDocument()
-    expect(within(nav).queryByRole('link', { name: /Outreach/ })).toBeNull()
+    expect(within(nav).getByText(/Applications, planned for Phase 6/)).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: /Applications/ })).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Referrals' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Job Discovery' })).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
@@ -364,5 +364,52 @@ describe('Referral leads (Phase 4)', () => {
     await resetDatabaseConnection()
     renderAt('#/referrals')
     expect(await screen.findByRole('heading', { name: 'Test Lead' })).toBeInTheDocument()
+  })
+})
+
+describe('Outreach (Phase 5)', () => {
+  const lead = {
+    id: 'lead-1',
+    name: 'Asha Rao',
+    company: 'Acme Corp',
+    role: 'Senior Backend Engineer',
+    sourceUrl: 'https://example.com/team',
+    pastCompanies: [],
+    schools: ['State University'],
+    knowsPersonally: false,
+    workedTogether: false,
+    status: 'new' as const,
+    note: '',
+    createdAt: '2026-11-01T00:00:00.000Z',
+    updatedAt: '2026-11-01T00:00:00.000Z',
+  }
+
+  beforeEach(async () => {
+    await profileRepository.save(makeProfile({ displayName: 'Test User', currentTitle: 'Software Engineer', schools: ['State University'] }))
+    const { contactsRepository } = await import('../storage/contactsRepository')
+    await contactsRepository.put(lead)
+    await resetDatabaseConnection()
+  })
+
+  it('drafts from recorded context, copies, logs a sent message and schedules a follow-up', async () => {
+    const user = userEvent.setup()
+    renderAt('#/outreach?lead=lead-1')
+    expect(await screen.findByRole('heading', { name: 'Why Asha Rao' })).toBeInTheDocument()
+    expect(screen.getByText(/Alumni: ask for advice first\./)).toBeInTheDocument()
+    const box = screen.getByLabelText(/Message \(edit freely\)/) as HTMLTextAreaElement
+    await waitFor(() => expect(box.value).toContain('studied at State University'))
+    expect(box.value).not.toMatch(/refer/i)
+
+    await user.click(screen.getByRole('button', { name: /Copy/ }))
+    expect(await screen.findByText(/Copied/)).toBeInTheDocument()
+    expect(await navigator.clipboard.readText()).toContain('Hi Asha')
+
+    await user.click(screen.getByRole('button', { name: /I sent it/ }))
+    expect(await screen.findByText(/Logged as sent/)).toBeInTheDocument()
+    expect(screen.getByText(/Next follow-up due/)).toBeInTheDocument()
+    expect(screen.getByText(/Sent \d{4}-\d{2}-\d{2} · first message/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /They replied/ }))
+    expect(await screen.findByText(/They replied: continue the conversation/)).toBeInTheDocument()
   })
 })

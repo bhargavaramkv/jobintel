@@ -1,4 +1,4 @@
-import { ExternalLink, Pencil, Plus, Search, Trash2, Users } from 'lucide-react'
+import { ExternalLink, Pencil, Plus, Search, Send, Trash2, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isActiveStage, stageOf } from '../../domain/jobs/actions'
@@ -219,6 +219,9 @@ export function ReferralsPage() {
                         ))}
                       </select>
                     </label>
+                    <Link className="btn btn--secondary btn--sm" to={`/outreach?lead=${encodeURIComponent(c.id)}`}>
+                      <Send size={13} aria-hidden="true" /> Draft outreach
+                    </Link>
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setForm({ existing: c })}>
                       <Pencil size={13} aria-hidden="true" /> Edit
                     </button>

@@ -93,7 +93,22 @@
 
 - Overlapping employers don't prove you overlapped in time or team; such leads stay "Inferred" until you confirm.
 - Leads are entered by hand. There is no import from LinkedIn or other networks, by design.
-## Phase 5: outreach strategist (not started)
+## Phase 5: outreach strategist ✅
+
+- [x] Outreach page (`#/outreach`, also "Draft outreach" on each lead): context panel with relationships, evidence, approach and job fit
+- [x] Strategies chosen from the evidence: direct connection / confirmed colleague ask for a referral; shared employer, alumni, mutual connection and cold contacts ask for advice first; recruiters get a role-focused note
+- [x] Overrides limited to strategies the facts support (`allowedStrategies`), so a draft can never claim a relationship you didn't record
+- [x] LinkedIn connection note (300-char limit enforced with a warning), LinkedIn message and email (with subject); concise / warm / formal tones
+- [x] Drafts are editable; "Facts this draft uses" lists every fact; warnings when profile details are missing
+- [x] Copy to clipboard; nothing is ever sent. "I sent it" logs the message with a date, marks the lead contacted, and moves a shortlisted job to "Referral requested" when the draft asked for one
+- [x] Message history per person, "They replied", saved drafts
+- [x] Follow-up policy: at most 2 follow-ups, 7 days apart, none after a reply. Due follow-ups listed on the page and counted on the dashboard
+- [x] Stored in IndexedDB (DB v4, `outreach` store); in encrypted backups (data schema 4)
+
+### Known limitations
+
+- Drafts are templates, not AI-written text. Edit them so they sound like you.
+- Replies are logged by hand; JobIntel can't see your inbox.
 ## Phase 6: application management (partly done: applied date + notes; interview/offer stages, status history and follow-ups not started)
 ## Phase 7: scheduled automation (scheduled scan done in Phase 2; reminders/notifications not started)
 ## Phase 8: analytics (not started)

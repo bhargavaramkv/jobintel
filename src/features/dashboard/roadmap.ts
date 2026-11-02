@@ -11,7 +11,7 @@ export const ROADMAP = [
   {
     phase: 5,
     label: 'Outreach strategist',
-    done: false,
+    done: true,
     blurb: 'Draft respectful referral and recruiter messages from known context only, with follow-up timing.',
   },
   {

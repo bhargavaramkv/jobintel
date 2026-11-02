@@ -3,7 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.3. Phases 1–4 (app shell + local profile, job discovery, matching, referral leads) are done. See
+**Status:** v0.4. Phases 1–5 (app shell + local profile, job discovery, matching, referral leads, outreach) are done. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -63,6 +63,14 @@ them yourself (the app only opens public searches in a new tab), and every lead 
 it. JobIntel never lets you type a relationship as a claim: "former colleague" appears only when the lead's
 companies overlap your own past employers, "alumni" only when colleges overlap, and each label shows whether it
 is **verified** (you confirmed it) or **inferred**. There are no email or phone fields.
+
+## Outreach (Phase 5)
+
+*Outreach* drafts LinkedIn notes, LinkedIn messages and emails for a referral lead, in three tones. The approach
+follows the evidence: a referral is asked for only when you confirmed you know the person or worked together;
+otherwise the draft asks for advice. Every draft lists the facts it used, and you can edit it. JobIntel never
+sends anything: copy the text, send it yourself, then press *I sent it* to log it. Follow-ups are suggested at
+most twice, a week apart, and stop when the person replies.
 
 ## Applied tracking and feedback
 

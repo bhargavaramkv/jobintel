@@ -83,6 +83,8 @@ export interface Relationship {
   confidence: Confidence
   /** Plain-language evidence shown next to the label. */
   evidence: string
+  /** The shared fact itself (company, college or introducer), for drafts. */
+  detail?: string
 }
 
 const norm = (s: string) =>
@@ -114,6 +116,7 @@ export function relationshipsOf(c: Contact, profile: CandidateProfile | null): R
     out.push({
       kind: 'former-colleague',
       confidence: c.workedTogether ? 'verified' : 'inferred',
+      detail: sharedCos[0],
       evidence: c.workedTogether
         ? `You confirmed you worked together (${sharedCos.join(', ')})`
         : `Both list ${sharedCos.join(', ')}; dates and teams not checked`,
@@ -122,11 +125,11 @@ export function relationshipsOf(c: Contact, profile: CandidateProfile | null): R
 
   const sharedSchools = overlap(c.schools, profile?.schools ?? [])
   if (sharedSchools.length) {
-    out.push({ kind: 'alumni', confidence: 'inferred', evidence: `Both list ${sharedSchools.join(', ')}` })
+    out.push({ kind: 'alumni', confidence: 'inferred', evidence: `Both list ${sharedSchools.join(', ')}`, detail: sharedSchools[0] })
   }
 
   if (c.mutual) {
-    out.push({ kind: 'mutual-connection', confidence: 'inferred', evidence: `Via ${c.mutual.name}: ${c.mutual.evidence}` })
+    out.push({ kind: 'mutual-connection', confidence: 'inferred', evidence: `Via ${c.mutual.name}: ${c.mutual.evidence}`, detail: c.mutual.name })
   }
 
   if (c.role && RECRUITER.test(c.role)) {

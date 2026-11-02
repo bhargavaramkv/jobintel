@@ -19,8 +19,11 @@ import { calculateReadiness } from '../../domain/profile/readiness'
 import { JobCard } from '../jobs/JobCard'
 import { useJobActions } from '../jobs/useJobActions'
 import { useContacts } from '../referrals/useContacts'
+import { useOutreach } from '../outreach/outreachContext'
+import { followUpState } from '../../domain/outreach/drafts'
+import { threadOf } from '../../domain/outreach/messages'
 import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
-import { stageOf } from '../../domain/jobs/actions'
+import { localDate, stageOf } from '../../domain/jobs/actions'
 import { matchJob, matchRank } from '../../domain/match/score'
 import { useJobFeed } from '../jobs/jobFeed'
 import { useProfile } from '../profile/useProfile'
@@ -35,10 +38,6 @@ interface Kpi {
   hint: string
 }
 
-/** Not-yet-built metrics stay at zero with their phase; no number is invented. */
-const PLANNED_KPIS: Kpi[] = [
-  { label: 'Follow-ups', value: 0, icon: CalendarClock, hint: 'Available in Phase 5' },
-]
 
 export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   const now = useNow(nowOverride)
@@ -67,6 +66,16 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
     return newest.sort((a, b) => (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) || score.get(b.id)! - score.get(a.id)!)
   }, [feed, prefs, now, actions, learned, targets, ranked, profile])
   const { contacts } = useContacts()
+  const { messages } = useOutreach()
+  const followUpsDue = useMemo(() => {
+    const day = localDate(now)
+    return [...contacts.values()].filter((c) => {
+      if (c.status === 'dismissed') return false
+      const t = threadOf(messages.values(), c.id)
+      const f = followUpState(t.sent, t.replied)
+      return !!f.dueOn && f.dueOn <= day
+    }).length
+  }, [contacts, messages, now])
   const leadCount = useMemo(() => [...contacts.values()].filter((c) => c.status !== 'dismissed').length, [contacts])
   const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
   const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
@@ -90,7 +99,12 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
       icon: Users,
       hint: leadCount ? 'Recorded by you, with sources' : 'Add leads in Referrals',
     },
-    ...PLANNED_KPIS,
+    {
+      label: 'Follow-ups',
+      value: followUpsDue,
+      icon: CalendarClock,
+      hint: followUpsDue ? 'Due today or overdue' : 'None due',
+    },
   ]
 
   return (

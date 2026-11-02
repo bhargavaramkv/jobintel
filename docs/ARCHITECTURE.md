@@ -134,3 +134,14 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
   confidence and evidence string. There is no field where a relationship can be asserted directly, so the UI
   cannot show an unsupported claim.
 - Backups: data schema 3 adds `contacts` (older backups restore with none).
+
+## Outreach (Phase 5)
+
+- IndexedDB **v4** adds the `outreach` store: drafts and the user's log of sent messages (`status`, `sentOn`,
+  `repliedOn`). Nothing is ever sent by the app.
+- `src/domain/outreach/drafts.ts`: `strategyFor(rels)` picks the approach from derived relationships;
+  `allowedStrategies(rels)` bounds user overrides; `generateDraft()` fills deterministic templates only with the
+  lead, evidence, job snapshot and profile, returning the facts used and warnings. `followUpState()` implements
+  the follow-up limit (2, a week apart, none after a reply).
+- `src/features/shared/recordContext.tsx` is a generic provider/hook over a `recordStore`, used by contacts and
+  outreach.
