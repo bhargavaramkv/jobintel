@@ -36,6 +36,8 @@ export const jobSchema = z.object({
   description: z.string(),
   /** Bullet points found under requirement/qualification headings. */
   requirements: z.array(z.string()),
+  /** Subset of `requirements` the posting lists as preferred / nice to have. Absent in older feeds. */
+  preferred: z.array(z.string()).optional(),
   /** Original posting URL on the company/ATS site. */
   url: z.string().url(),
   /** When the source says the job was published, if it says. */

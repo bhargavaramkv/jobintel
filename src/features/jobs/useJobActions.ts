@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { JobAction, JobRef, RejectReason } from '../../domain/jobs/actions'
+import type { ApplicationDetails, JobAction, JobRef, RejectReason, Stage } from '../../domain/jobs/actions'
 import type { Learned } from '../../domain/jobs/feedback'
 
 export interface JobActionsContextValue {
@@ -17,6 +17,12 @@ export interface JobActionsContextValue {
   /** Remove the "company" reason from every rejection at this company (un-hide it). */
   unhideCompany: (company: string) => Promise<void>
   replaceAll: (actions: JobAction[]) => Promise<void>
+  /** Move a job to an application stage (shortlist, applied, interview…), recording history. */
+  setStage: (ref: JobRef, stage: Stage, note?: string) => Promise<void>
+  /** Remove the job from the pipeline (e.g. un-shortlist). */
+  removeStage: (jobId: string) => Promise<void>
+  /** Save application details (next action, follow-up date, interviews…). */
+  updateDetails: (jobId: string, details: ApplicationDetails) => Promise<void>
 }
 
 export const JobActionsContext = createContext<JobActionsContextValue | null>(null)

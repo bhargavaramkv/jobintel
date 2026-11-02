@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNow } from '../../components/layout/useNow'
 import { CITY_ORDER } from '../../domain/jobs/cities'
-import type { JobAction } from '../../domain/jobs/actions'
+import { stageOf, type JobAction } from '../../domain/jobs/actions'
 import { assessJob, describeLearning, hasSignals, targetLevels } from '../../domain/jobs/feedback'
 import { ATS_LABEL, type City, type Job, type JobFeed, type JobWorkMode } from '../../domain/jobs/feedSchema'
 import {
@@ -18,6 +18,7 @@ import {
   type JobFilters,
   type SortKey,
 } from '../../domain/jobs/filters'
+import { isStalePosting, matchJob, matchRank, similarPostings } from '../../domain/match/score'
 import { useProfile } from '../profile/useProfile'
 import { JobCard } from './JobCard'
 import { useJobActions } from './useJobActions'
@@ -72,7 +73,8 @@ export function JobsPage({ now: nowOverride }: { now?: Date }) {
   )
 }
 
-type View = 'review' | 'applied' | 'rejected' | 'all'
+type View = 'review' | 'shortlist' | 'applied' | 'rejected' | 'all'
+type SortChoice = SortKey | 'recommended' | 'match'
 
 function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
   const { profile } = useProfile()
@@ -81,11 +83,12 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
   const targets = useMemo(() => targetLevels(profile?.targetSeniority ?? []), [profile])
   const [filters, setFilters] = useState<JobFilters>(DEFAULT_FILTERS)
   const [view, setView] = useState<View>('review')
-  const [sortChoice, setSortChoice] = useState<SortKey | 'recommended' | null>(null)
+  const [sortChoice, setSortChoice] = useState<SortChoice | null>(null)
   const [showHidden, setShowHidden] = useState(false)
   const [limit, setLimit] = useState(PAGE)
-  // Default to the learned ranking once there is something to learn from.
-  const sort = sortChoice ?? (hasSignals(learned, targets) ? 'recommended' : 'newest')
+  // Default to fit once the profile has skills, else the learned ranking once there is something to learn from.
+  const canMatch = !!profile && profile.primarySkills.length + profile.secondarySkills.length > 0
+  const sort: SortChoice = sortChoice ?? (canMatch ? 'match' : hasSignals(learned, targets) ? 'recommended' : 'newest')
 
   const set = <K extends keyof JobFilters>(key: K, value: JobFilters[K]) => {
     setFilters((f) => ({ ...f, [key]: value }))
@@ -106,40 +109,51 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
 
   const filtered = useMemo(() => applyFilters(feed.jobs, filters, prefs, now), [feed, filters, prefs, now])
   const assessed = useMemo(() => new Map(filtered.map((j) => [j.id, assessJob(j, learned, targets)])), [filtered, learned, targets])
+  const matches = useMemo(() => new Map(filtered.map((j) => [j.id, matchJob(j, profile, targets)])), [filtered, profile, targets])
+  const similar = useMemo(() => similarPostings(feed.jobs), [feed])
 
   const counts = useMemo(() => {
     let applied = 0
     let rejected = 0
+    let shortlist = 0
     for (const a of actions.values()) {
       if (a.decision === 'applied') applied++
       else if (a.decision === 'rejected') rejected++
+      else if (stageOf(a)) shortlist++
     }
-    const hiddenCount = filtered.filter((j) => !actions.get(j.id)?.decision && assessed.get(j.id)?.hidden).length
-    const review = filtered.filter((j) => !actions.get(j.id)?.decision && !assessed.get(j.id)?.hidden).length
-    return { applied, rejected, review, hiddenCount }
+    const undecided = (j: Job) => !actions.get(j.id)?.decision && !stageOf(actions.get(j.id))
+    const hiddenCount = filtered.filter((j) => undecided(j) && assessed.get(j.id)?.hidden).length
+    const review = filtered.filter((j) => undecided(j) && !assessed.get(j.id)?.hidden).length
+    return { applied, rejected, shortlist, review, hiddenCount }
   }, [actions, filtered, assessed])
 
   type Item = { key: string; job?: Job; record?: JobAction }
   const items: Item[] = useMemo(() => {
-    if (view === 'applied' || view === 'rejected') {
+    if (view === 'applied' || view === 'rejected' || view === 'shortlist') {
       const q = filters.query.trim().toLowerCase()
       return [...actions.values()]
-        .filter((a) => a.decision === view)
+        .filter((a) => (view === 'shortlist' ? !a.decision && !!stageOf(a) : a.decision === view))
         .filter((a) => !q || `${a.snapshot.title} ${a.snapshot.company} ${a.note}`.toLowerCase().includes(q))
         .sort((a, b) => (b.appliedOn ?? b.updatedAt).localeCompare(a.appliedOn ?? a.updatedAt))
         .map((a) => ({ key: a.jobId, job: jobsById.get(a.jobId), record: a }))
     }
     const pool = filtered.filter((j) => {
       if (view === 'all') return true
-      if (actions.get(j.id)?.decision) return false
+      const a = actions.get(j.id)
+      if (a?.decision || stageOf(a)) return false
       return showHidden || !assessed.get(j.id)?.hidden
     })
+    const learnedScore = (j: Job) => assessed.get(j.id)?.score ?? 0
     const ordered =
       sort === 'recommended'
-        ? sortJobs(pool, 'newest').sort((a, b) => (assessed.get(b.id)?.score ?? 0) - (assessed.get(a.id)?.score ?? 0))
-        : sortJobs(pool, sort)
+        ? sortJobs(pool, 'newest').sort((a, b) => learnedScore(b) - learnedScore(a))
+        : sort === 'match'
+          ? sortJobs(pool, 'newest').sort(
+              (a, b) => matchRank(matches.get(b.id)!) - matchRank(matches.get(a.id)!) || learnedScore(b) - learnedScore(a),
+            )
+          : sortJobs(pool, sort)
     return ordered.map((j) => ({ key: j.id, job: j, record: actions.get(j.id) }))
-  }, [view, actions, filtered, assessed, showHidden, sort, filters.query, jobsById])
+  }, [view, actions, filtered, assessed, matches, showHidden, sort, filters.query, jobsById])
 
   const openCount = feed.jobs.filter((j) => j.status === 'open').length
   const freshness = feedFreshness(feed.lastSuccessfulScanAt, now)
@@ -147,7 +161,7 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
   const failed = feed.sources.filter((s) => s.status === 'error')
   const filtersChanged = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS)
   const learnedLines = describeLearning(learned)
-  const decidedView = view === 'applied' || view === 'rejected'
+  const decidedView = view === 'applied' || view === 'rejected' || view === 'shortlist'
 
   const toggleCity = (c: City) =>
     set('cities', filters.cities.includes(c) ? filters.cities.filter((x) => x !== c) : [...filters.cities, c])
@@ -162,6 +176,7 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
 
   const TABS: Array<[View, string, number | null]> = [
     ['review', 'To review', counts.review],
+    ['shortlist', 'Shortlisted', counts.shortlist],
     ['applied', 'Applied', counts.applied],
     ['rejected', 'Not interested', counts.rejected],
     ['all', 'All', null],
@@ -368,8 +383,9 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
               <SelectFilter
                 label="Sort"
                 value={sort}
-                onChange={(v) => setSortChoice(v as SortKey | 'recommended')}
+                onChange={(v) => setSortChoice(v as SortChoice)}
                 options={[
+                  ['match', canMatch ? 'Best fit for your profile' : 'Best fit (add skills to your profile)'],
                   ['recommended', hasSignals(learned, targets) ? 'Recommended for you' : 'Recommended (mark jobs to train)'],
                   ['newest', 'Newest first seen'],
                   ['posted', 'Most recently posted'],
@@ -405,7 +421,9 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
         <section className="panel">
           <div className="empty">
             <h2 className="empty__title">
-              {view === 'applied'
+              {view === 'shortlist'
+                ? 'Nothing shortlisted yet'
+                : view === 'applied'
                 ? 'No applications marked yet'
                 : view === 'rejected'
                   ? 'Nothing marked as not interested'
@@ -413,7 +431,7 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
             </h2>
             <p className="empty__text">
               {decidedView
-                ? 'Use "Mark applied" or "Not interested" on a job. Your decisions stay in this browser.'
+                ? 'Use "Shortlist", "Mark applied" or "Not interested" on a job. Your decisions stay in this browser.'
                 : 'Try clearing a filter or turning off profile preferences.'}
             </p>
           </div>
@@ -428,6 +446,9 @@ function FeedView({ feed, now }: { feed: JobFeed; now: Date }) {
               now={now}
               isNew={newIds.has(it.key)}
               assessment={sort === 'recommended' || view === 'review' ? assessed.get(it.key) : undefined}
+              match={it.job ? (matches.get(it.key) ?? matchJob(it.job, profile, targets)) : undefined}
+              similarCount={similar.get(it.key)?.length ?? 0}
+              stale={it.job ? isStalePosting(it.job, now) : false}
             />
           ))}
         </div>

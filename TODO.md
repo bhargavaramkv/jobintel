@@ -60,7 +60,23 @@
 - [x] Dashboard: real **Applied** count, and the feed shows only undecided jobs, ranked
 - Decisions never leave the browser. The GitHub scan never sees them; the learning runs client-side on each new feed.
 
-## Phase 3: matching engine (not started; skill-based fit scoring still to do)
+## Phase 3: matching engine ✅
+
+- [x] Deterministic fit score in the browser (`src/domain/match/score.ts`): skills 30, experience 20, role alignment 20, location/work 10, seniority 10, other 10
+- [x] Every factor shows its evidence (matched / missing). A factor with no data on either side is left out of the score, and the card shows the coverage
+- [x] Mandatory vs preferred skills: the collector now tags bullets under "preferred / nice to have / bonus" headings (`preferred` in the feed), and bullets saying "a plus" count as preferred
+- [x] Skill vocabulary with careful synonyms (`.NET` = ASP.NET Core = dotnet; JavaScript ≠ TypeScript; Java ≠ Kotlin); longer names shadow shorter ones (SQL Server ≠ SQL)
+- [x] Score capped at 50 when the profile lists under a third of the required skills
+- [x] "Best fit for your profile" sort (default once the profile has skills); dashboard feed ranked by fit too
+- [x] Stale ("posted long ago", 60+ days) and similar-posting (same company + title) flags
+- [x] Shortlist / un-shortlist on every job, with a Shortlisted tab. Hide = "Not interested"
+- [x] Tests: positive, negative and edge cases, determinism, missing data never counted as a match
+
+### Known limitations
+
+- Skill matching is by name. A posting that describes a skill without naming it isn't recognised.
+- Years of experience are read from text like "3+ years" or "3–5 yrs"; the largest lower bound wins, which can over-read numbers that aren't requirements.
+- Older feed entries have no `preferred` field until the next scan.
 ## Phase 4: referral intelligence (not started)
 ## Phase 5: outreach strategist (not started)
 ## Phase 6: application management (partly done: applied date + notes; interview/offer stages, status history and follow-ups not started)

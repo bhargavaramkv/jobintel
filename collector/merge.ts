@@ -46,6 +46,7 @@ export function toJob(source: SourceConfig, raw: RawJob, opts: MergeOptions): Om
     employmentType: raw.employmentType,
     description: truncate(raw.descriptionText, opts.maxDescriptionChars),
     requirements: raw.requirements,
+    ...(raw.preferred?.length ? { preferred: raw.preferred } : {}),
     url: raw.url,
     postedAt: raw.postedAt,
   }

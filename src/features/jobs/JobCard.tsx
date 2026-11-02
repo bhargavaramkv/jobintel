@@ -1,10 +1,22 @@
-import { ArrowDown, ArrowUp, Check, ChevronDown, ExternalLink, MapPin, NotebookPen, RotateCcw, ThumbsDown } from 'lucide-react'
+import { ArrowDown, ArrowUp, Bookmark, BookmarkCheck, Check, ChevronDown, ExternalLink, MapPin, NotebookPen, RotateCcw, ThumbsDown } from 'lucide-react'
 import { useId, useState } from 'react'
 import { Dialog } from '../../components/ui/Dialog'
-import { localDate, NOTE_MAX, REJECT_REASONS, refOf, type JobAction, type JobRef, type RejectReason } from '../../domain/jobs/actions'
+import {
+  localDate,
+  NOTE_MAX,
+  REJECT_REASONS,
+  refOf,
+  STAGE_LABEL,
+  stageOf,
+  type JobAction,
+  type JobRef,
+  type RejectReason,
+} from '../../domain/jobs/actions'
 import type { Assessment } from '../../domain/jobs/feedback'
 import { ATS_LABEL, type Job } from '../../domain/jobs/feedSchema'
 import { relativeTime } from '../../domain/jobs/filters'
+import type { MatchResult } from '../../domain/match/score'
+import { MatchBreakdown, MatchPill } from './MatchBreakdown'
 import { useJobActions } from './useJobActions'
 
 const WORK_MODE_LABEL = { onsite: 'Onsite', hybrid: 'Hybrid', remote: 'Remote', unknown: 'Work mode not stated' } as const
@@ -17,6 +29,11 @@ interface JobCardProps {
   now: Date
   isNew?: boolean
   assessment?: Assessment
+  match?: MatchResult
+  /** Other open postings at the same company with the same title. */
+  similarCount?: number
+  /** Posted long ago according to the source. */
+  stale?: boolean
 }
 
 function formatDay(isoDate: string) {
@@ -24,8 +41,8 @@ function formatDay(isoDate: string) {
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function JobCard({ job, record, now, isNew = false, assessment }: JobCardProps) {
-  const { markApplied, markRejected, clearDecision, setNote, setAppliedOn } = useJobActions()
+export function JobCard({ job, record, now, isNew = false, assessment, match, similarCount = 0, stale = false }: JobCardProps) {
+  const { markApplied, markRejected, clearDecision, setNote, setAppliedOn, setStage, removeStage } = useJobActions()
   const [open, setOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -37,6 +54,8 @@ export function JobCard({ job, record, now, isNew = false, assessment }: JobCard
   const ref: JobRef = job ? refOf(job) : { jobId: record!.jobId, snapshot: record!.snapshot }
   const s = ref.snapshot
   const decision = record?.decision
+  const stage = stageOf(record)
+  const preApplied = !decision && !!stage
   const gone = !job
   const cities = job?.cities ?? s.cities
   const where = [...cities.filter((c) => c !== 'Other India'), ...(job?.remoteIndia ? ['Remote (India)'] : [])]
@@ -71,7 +90,19 @@ export function JobCard({ job, record, now, isNew = false, assessment }: JobCard
             </a>
           </h3>
           <div className="job__badges">
+            {match && job?.status === 'open' && !decision && <MatchPill match={match} />}
             {isNew && !decision && job?.status === 'open' && <span className="badge badge--accent">New</span>}
+            {preApplied && (
+              <span className="badge badge--accent">
+                <BookmarkCheck size={11} aria-hidden="true" /> {STAGE_LABEL[stage!]}
+              </span>
+            )}
+            {decision === 'applied' && stage && stage !== 'applied' && <span className="badge">{STAGE_LABEL[stage]}</span>}
+            {stale && job?.status === 'open' && (
+              <span className="badge badge--warning" title="The source says this was posted over two months ago. It may already be filled.">
+                Posted long ago
+              </span>
+            )}
             {decision === 'applied' && (
               <span className="badge badge--success">
                 <Check size={11} aria-hidden="true" /> Applied{record?.appliedOn ? ` · ${formatDay(record.appliedOn)}` : ''}
@@ -95,6 +126,11 @@ export function JobCard({ job, record, now, isNew = false, assessment }: JobCard
             {ATS_LABEL[job.ats]} · {job.postedAt ? `posted ${relativeTime(job.postedAt, now)}` : 'post date not stated'} · first
             seen {relativeTime(job.firstSeenAt, now)} · verified {relativeTime(job.lastVerifiedAt, now)}
             {job.closedAt && ` · closed ${relativeTime(job.closedAt, now)}`}
+          </p>
+        )}
+        {similarCount > 0 && job?.status === 'open' && (
+          <p className="job__similar mono muted">
+            {similarCount} similar posting{similarCount > 1 ? 's' : ''} at {s.company} (other locations or teams)
           </p>
         )}
         {decision === 'rejected' && record!.rejectReasons.length > 0 && (
@@ -133,6 +169,27 @@ export function JobCard({ job, record, now, isNew = false, assessment }: JobCard
       <div className="job__actions" role="group" aria-label={`Actions for ${s.title}`}>
         {!decision && (
           <>
+            {preApplied ? (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                disabled={busy}
+                aria-pressed="true"
+                onClick={() => run(() => removeStage(ref.jobId), `Removed ${s.title} from your shortlist`)}
+              >
+                <BookmarkCheck size={14} aria-hidden="true" /> {stage === 'shortlisted' ? 'Shortlisted' : STAGE_LABEL[stage!]}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                disabled={busy}
+                aria-pressed="false"
+                onClick={() => run(() => setStage(ref, 'shortlisted'), `Shortlisted ${s.title}`)}
+              >
+                <Bookmark size={14} aria-hidden="true" /> Shortlist
+              </button>
+            )}
             <button
               type="button"
               className="btn btn--secondary btn--sm"
@@ -194,12 +251,16 @@ export function JobCard({ job, record, now, isNew = false, assessment }: JobCard
 
       {open && job && (
         <div id={`${id}-details`} className="job__details">
+          {match && <MatchBreakdown match={match} />}
           {job.requirements.length > 0 && (
             <>
               <h4 className="eyebrow">Requirements as listed</h4>
               <ul>
                 {job.requirements.map((r, i) => (
-                  <li key={i}>{r}</li>
+                  <li key={i}>
+                    {r}
+                    {job.preferred?.includes(r) && <span className="badge job__pref">preferred</span>}
+                  </li>
                 ))}
               </ul>
             </>

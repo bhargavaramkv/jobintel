@@ -19,10 +19,12 @@ import { calculateReadiness } from '../../domain/profile/readiness'
 import { JobCard } from '../jobs/JobCard'
 import { useJobActions } from '../jobs/useJobActions'
 import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
+import { stageOf } from '../../domain/jobs/actions'
+import { matchJob, matchRank } from '../../domain/match/score'
 import { useJobFeed } from '../jobs/jobFeed'
 import { useProfile } from '../profile/useProfile'
 import { greetingFor } from './greeting'
-import { ROADMAP } from './roadmap'
+import { NEXT_MILESTONE, ROADMAP } from './roadmap'
 import './dashboard.css'
 
 interface Kpi {
@@ -55,13 +57,15 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   const matching = useMemo(() => {
     if (!feed) return []
     const pool = applyFilters(feed.jobs, DEFAULT_FILTERS, prefs, now).filter(
-      (j) => !actions.get(j.id)?.decision && !assessJob(j, learned).hidden,
+      (j) => !actions.get(j.id)?.decision && !stageOf(actions.get(j.id)) && !assessJob(j, learned).hidden,
     )
     const newest = sortJobs(pool, 'newest')
-    if (!ranked) return newest
+    const canMatch = !!profile && profile.primarySkills.length + profile.secondarySkills.length > 0
+    if (!ranked && !canMatch) return newest
     const score = new Map(newest.map((j) => [j.id, assessJob(j, learned, targets).score]))
-    return newest.sort((a, b) => score.get(b.id)! - score.get(a.id)!)
-  }, [feed, prefs, now, actions, learned, targets, ranked])
+    const fit = new Map(canMatch ? newest.map((j) => [j.id, matchRank(matchJob(j, profile, targets))]) : [])
+    return newest.sort((a, b) => (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) || score.get(b.id)! - score.get(a.id)!)
+  }, [feed, prefs, now, actions, learned, targets, ranked, profile])
   const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
   const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
   const freshness = feedFreshness(feed?.lastSuccessfulScanAt, now)
@@ -165,6 +169,7 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
                   now={now}
                   isNew={fresh.some((f) => f.id === j.id)}
                   assessment={ranked ? assessJob(j, learned, targets) : undefined}
+                  match={profile ? matchJob(j, profile, targets) : undefined}
                 />
               ))}
               <Link to="/jobs" className="btn btn--secondary feed__all">
@@ -268,10 +273,16 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
               <Flag size={16} className="muted" aria-hidden="true" />
             </div>
             <div className="panel__body milestone">
-              <p>
-                <strong>Phase 3 · Matching engine.</strong> Rank discovered jobs against your profile in this browser, with
-                an explained score of matched and missing skills, plus shortlist and hide.
-              </p>
+              {NEXT_MILESTONE ? (
+                <p>
+                  <strong>
+                    Phase {NEXT_MILESTONE.phase} · {NEXT_MILESTONE.label}.
+                  </strong>{' '}
+                  {NEXT_MILESTONE.blurb}
+                </p>
+              ) : (
+                <p>All planned phases are available.</p>
+              )}
               <ol className="roadmap">
                 {ROADMAP.map((r) => (
                   <li key={r.phase} className={r.done ? 'is-done' : undefined}>

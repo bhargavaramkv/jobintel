@@ -3,9 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.1. Phase 1 (app shell + local candidate profile) and Phase 2 (job discovery) are done.
-Matching, referrals, outreach, application tracking and analytics are planned. They are **not**
-implemented yet. See
+**Status:** v0.2. Phases 1–3 (app shell + local profile, job discovery, matching) are done. See
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -49,6 +47,14 @@ the feed contains only public posting facts. Note that the list of tracked compa
 - Run a scan locally: `node collector/run.ts` (Node 24+)
 - Check a board before adding it: `node collector/probe.ts greenhouse:<board> lever:<site> ashby:<name>`
 - Run a scan from GitHub: Actions → *Job discovery scan* → *Run workflow*
+
+## Matching (Phase 3)
+
+Every job gets an explained **fit score** computed in your browser: technical skills (30%), experience (20%),
+role alignment (20%), location and work mode (10%), seniority (10%) and other requirements (10%). Open
+*Details* on a job to see each factor with what matched and what's missing. Factors without data are left out
+rather than counted as a match, and the card says how much of the score had evidence. Shortlist the jobs you
+want to pursue; they move to the *Shortlisted* tab.
 
 ## Applied tracking and feedback
 

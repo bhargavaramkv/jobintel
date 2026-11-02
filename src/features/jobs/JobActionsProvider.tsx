@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  hasContent,
   withApplied,
+  withDetails,
+  withoutStage,
+  withStage,
   withAppliedOn,
   withNote,
   withoutDecision,
@@ -71,7 +75,7 @@ export function JobActionsProvider({ children }: { children: ReactNode }) {
         const existing = get(ref.jobId)
         const next = withNote(ref, existing, note)
         // Don't store an empty record that has neither a decision nor a note.
-        await commit(ref.jobId, !next.decision && !next.note.trim() ? null : next)
+        await commit(ref.jobId, hasContent(next) ? next : null)
       },
       setAppliedOn: async (jobId: string, isoDate: string) => {
         const existing = get(jobId)
@@ -82,6 +86,15 @@ export function JobActionsProvider({ children }: { children: ReactNode }) {
           if (a.snapshot.company !== company || !a.rejectReasons.includes('company')) continue
           await commit(a.jobId, { ...a, rejectReasons: a.rejectReasons.filter((r) => r !== 'company'), updatedAt: new Date().toISOString() })
         }
+      },
+      setStage: (ref, stage, note) => commit(ref.jobId, withStage(ref, get(ref.jobId), stage, new Date(), note)),
+      removeStage: async (jobId: string) => {
+        const existing = get(jobId)
+        if (existing) await commit(jobId, withoutStage(existing))
+      },
+      updateDetails: async (jobId, details) => {
+        const existing = get(jobId)
+        if (existing) await commit(jobId, withDetails(existing, details))
       },
       replaceAll: async (rows: JobAction[]) => {
         await jobActionsRepository.replaceAll(rows)

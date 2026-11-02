@@ -275,3 +275,54 @@ describe('Applied / Not interested / notes', () => {
     expect(screen.getByText(/No data roles/)).toBeInTheDocument()
   })
 })
+
+describe('Matching and shortlist (Phase 3)', () => {
+  const now = new Date()
+  const iso = (h: number) => new Date(now.getTime() - h * 3_600_000).toISOString()
+  const feed = makeFeed(
+    [
+      makeJob({ sourceId: 'm1', title: 'Backend Engineer II', requirements: ['3+ years with C# and .NET', 'SQL Server'], firstSeenAt: iso(3) }),
+      makeJob({ sourceId: 'm2', title: 'Senior Frontend Engineer', requirements: ['7+ years with React and TypeScript'], firstSeenAt: iso(1) }),
+    ],
+    iso(1),
+  )
+
+  beforeEach(async () => {
+    globalThis.fetch = mockFetchFeed(feed)
+    await profileRepository.save(
+      makeProfile({
+        yearsExperience: 4,
+        primarySkills: [{ name: 'C#' }, { name: 'ASP.NET Core' }, { name: 'SQL Server' }],
+        targetRoles: ['Backend Engineer'],
+        targetSeniority: ['SDE-2'],
+        preferredLocations: ['Bengaluru'],
+      }),
+    )
+    await resetDatabaseConnection()
+  })
+
+  const card = (title: RegExp) => screen.getByRole('link', { name: title }).closest('article') as HTMLElement
+
+  it('ranks by fit and explains the score', async () => {
+    const user = userEvent.setup()
+    renderAt('#/jobs')
+    await screen.findByRole('link', { name: /Backend Engineer II/ })
+    const titles = screen.getAllByRole('article').map((a) => within(a).getByRole('heading').textContent ?? '')
+    expect(titles[0]).toMatch(/Backend Engineer II/) // older but better fit
+    expect(within(card(/Backend Engineer II/)).getByText(/Fit \d+/)).toBeInTheDocument()
+    await user.click(within(card(/Senior Frontend/)).getByRole('button', { name: /Details/ }))
+    const breakdown = within(card(/Senior Frontend/)).getByRole('region', { name: 'Fit breakdown' })
+    expect(within(breakdown).getByText(/Missing: .*React/)).toBeInTheDocument()
+    expect(within(breakdown).getByText(/you have 4 \(3 short\)/)).toBeInTheDocument()
+  })
+
+  it('shortlists a job and lists it under Shortlisted', async () => {
+    const user = userEvent.setup()
+    renderAt('#/jobs')
+    await screen.findByRole('link', { name: /Backend Engineer II/ })
+    await user.click(within(card(/Backend Engineer II/)).getByRole('button', { name: /Shortlist/ }))
+    await waitFor(() => expect(screen.queryByRole('link', { name: /Backend Engineer II/ })).toBeNull())
+    await user.click(screen.getByRole('tab', { name: /Shortlisted/ }))
+    expect(within(card(/Backend Engineer II/)).getAllByText(/Shortlisted/).length).toBeGreaterThan(0)
+  })
+})

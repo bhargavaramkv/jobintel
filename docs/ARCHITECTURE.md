@@ -112,6 +112,15 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
 - Learning happens at read time in the browser, so each new public feed is ranked with the latest
   decisions without ever publishing them.
 
-## Future phases (not implemented)
+## Matching (Phase 3)
 
-Phase 3 will rank feed jobs against the local profile in the browser, with explained scores. See `IMPLEMENTATION_PLAN.md` §2.3 and §7.
+- `src/domain/match/skills.ts`: a fixed vocabulary of ~100 skills with aliases. Aliases only join spellings of the
+  same thing. Longer aliases of other skills are blanked before a shorter one is tested ("SQL Server" never counts
+  as "SQL"). Profile skills outside the vocabulary are matched literally.
+- `src/domain/match/score.ts`: `matchJob(job, profile, targets)` returns six weighted factors, each with a value
+  in 0..1 or `null` (no evidence). The score is the weighted mean of the known factors, and `coverage` is the
+  share of weight that had evidence. Bands need at least 50% coverage. When fewer than a third of 3+ required
+  skills are listed in the profile, the score is capped at 50.
+- Mandatory vs preferred: the collector writes `preferred` (bullets under preferred-style headings); bullets that
+  say "a plus" / "nice to have" also count as preferred.
+- Runs on every render of the feed in the browser; nothing about the profile leaves it.
