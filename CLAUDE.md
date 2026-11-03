@@ -1,14 +1,14 @@
 # JobIntel — agent guide
 
 Local-first job-search app (React + Vite + Zod, IndexedDB, GitHub Pages) with a GitHub Actions job collector.
-Product context: `README.md`. Architecture: `docs/ARCHITECTURE.md`. Roadmap/status: `TODO.md`, `docs/IMPLEMENTATION_PLAN.md`.
+Product context: `README.md`. Architecture: `docs/ARCHITECTURE.md`. Status: `TODO.md`. Security/recovery: `docs/SECURITY.md`, `docs/RECOVERY.md`.
 
 ## Use the knowledge graph first — do NOT read the whole repo
 
 A pre-built graph of this repo lives in `graphify-out/` (code via AST + docs/favicon semantically).
 Reading it is enough to orient yourself; open source files only for the specific nodes the graph points you to.
 
-1. Read `graphify-out/GRAPH_REPORT.md` once (~3.5k tokens): god nodes, communities with labels, cross-doc links.
+1. Read `graphify-out/GRAPH_REPORT.md` once (~4k tokens): god nodes, communities with labels, cross-doc links.
 2. Ask the graph instead of grepping or globbing the tree:
    - `graphify query "<question>"` — BFS context for a question (`--dfs` to trace one path, `--budget N` to cap tokens)
    - `graphify explain "<node>"` — what a symbol/file/concept is and what it connects to
@@ -27,26 +27,31 @@ Keeping the graph fresh (works the same locally and in the cloud):
 - **Code changes:** CI (`.github/workflows/graph.yml`) runs `graphify update .` on every push to `main` and commits the result
   (`chore(graph): refresh code graph`). You normally do nothing. To query your *own uncommitted* changes, run
   `graphify update .` yourself (AST only, no LLM, no API key), but do **not** stage `graphify-out/` in code PRs — CI owns it.
-- **Doc/markdown/image changes** (README, TODO, docs/, favicon): CI cannot re-extract these semantically. Run `/graphify . --update`
-  and commit the `graphify-out/` changes in that same PR. On a `graph.json` merge conflict, take `main`'s version and re-run the update.
+- **Doc/markdown/image changes** (README, TODO, docs/, favicon): CI cannot re-extract these semantically, so the doc part of the
+  graph goes stale. Run `/graphify . --update` (run `graphify install` first if the `/graphify` skill is missing) and commit the
+  `graphify-out/` changes in that same PR. If you can't, say so in the PR. On a `graph.json` merge conflict, take `main`'s
+  version and re-run the update.
 - Never rebuild from scratch (`/graphify .`) unless `graph.json` is missing; `--update` only re-reads changed files.
+- Community names can degrade to file names (e.g. "actions.ts") as the code grows; that is cosmetic. `graphify label .` renames them (needs an LLM).
 
 ## Where things live (so you can skip exploring)
 
-| Area | Path | Notes |
-|---|---|---|
-| App shell, routing | `src/app/` | HashRouter, `router.tsx` |
-| UI primitives / layout | `src/components/ui`, `src/components/layout` | ChoiceGroup, Field, TagInput, dialogs |
-| Screens | `src/features/{dashboard,jobs,profile}` | `DashboardPage`, `FeedView`, `ProfileEditor` |
-| Domain logic (pure) | `src/domain/{jobs,profile}` | `feedSchema.ts` (shared Zod contract), `feedback.ts` (learned ranking), `actions.ts`, `filters.ts`, `readiness.ts` |
-| Persistence | `src/storage/` | IndexedDB `jobintel` (v2: profile + `jobActions`), `profileRepository` |
-| Collector | `collector/` | Greenhouse/Lever/Ashby adapters, `sources.json`, `run.ts`, `merge.ts`, `location.ts`, title filter; writes `public/data/jobs.json` |
-| CI | `.github/workflows/` | `pages.yml` (deploy), `scan.yml` (collector, 3x/day) |
-| Tests | `*.test.ts(x)` beside code, `e2e/` | Vitest + Playwright |
+Stable layout only; for specifics (files, symbols, status) ask the graph — this table does not track them.
+
+| Area | Path |
+|---|---|
+| App shell, routing | `src/app/` |
+| UI primitives and layout | `src/components/{ui,layout}` |
+| Screens, one folder per feature | `src/features/*` (dashboard, jobs, profile, applications, outreach, referrals, reminders, analytics, shared) |
+| Domain logic (pure, no React) | `src/domain/*` (mirrors the features, plus `match`); `src/domain/jobs/feedSchema.ts` is the Zod feed contract shared with the collector |
+| Persistence (IndexedDB) | `src/storage/` |
+| Job collector (Greenhouse/Lever/Ashby, runs in Actions) | `collector/`; writes `public/data/jobs.json` |
+| CI | `.github/workflows/` (`pages.yml` deploy, `scan.yml` job scan, `graph.yml` graph refresh) |
+| Tests | `*.test.ts(x)` beside the code, plus `e2e/` (Vitest + Playwright) |
 
 ## Project rules that are not derivable from code
 
 - Collector scope is Bengaluru + Hyderabad only; all work modes (onsite/hybrid/remote). Target roles: full-stack / backend / .NET / product engineering, SDE-2 level, product (SaaS) companies.
 - The site is public; profile data lives only in the user's browser (IndexedDB). Never commit personal backups (`*.jibak.json`, `*.backup.json`).
-- The feed contract (`feedSchema.ts`, zod) is shared by the collector and the app — change it in one place.
-- Phase 3 (skill-based matching) is not started; phases 1–2 and applied/not-interested tracking are shipped.
+- The feed contract (`feedSchema.ts`) is shared by the collector and the app — change it in one place.
+- All planned phases (1–9) are implemented; `TODO.md` is the source of truth for status.
