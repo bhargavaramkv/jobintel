@@ -7,7 +7,7 @@
  *   - every new board is reachable and lists at least one engineering role in Bengaluru or Hyderabad.
  * The auto-sources workflow merges a discovery branch only when this exits 0.
  */
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { ATS_KINDS, type AtsKind } from '../src/domain/jobs/feedSchema.ts'
 import { fetchSource } from './adapters.ts'
 import { makeTitleFilter } from './filter.ts'
@@ -47,21 +47,35 @@ export function diffSources(base: Source[], next: Source[]): { added: Source[]; 
   return { added, problems }
 }
 
+/**
+ * Usage: node collector/verify-sources.ts <base-sources.json> [--write-accepted]
+ * Structural problems (removals, edits, malformed or duplicate entries) always fail.
+ * A board that is unreachable or has no local engineering roles is dropped. With --write-accepted,
+ * sources.json is rewritten as base + the boards that passed, and the run fails only if none passed.
+ */
 async function main() {
   const basePath = process.argv[2]
+  const writeAccepted = process.argv.includes('--write-accepted')
   if (!basePath) {
-    console.error('usage: node collector/verify-sources.ts <base-sources.json>')
+    console.error('usage: node collector/verify-sources.ts <base-sources.json> [--write-accepted]')
     process.exit(2)
   }
   const current = new URL('./sources.json', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
-  const { added, problems } = diffSources(readSources(basePath), readSources(current))
-  if (!added.length && !problems.length) {
+  const base = readSources(basePath)
+  const { added, problems } = diffSources(base, readSources(current))
+  if (problems.length) {
+    console.error(`REJECTED (structure):\n- ${problems.join('\n- ')}`)
+    process.exit(1)
+  }
+  if (!added.length) {
     console.log('No new sources.')
     return
   }
   const config = loadConfig()
   const keep = makeTitleFilter(config.titleFilter)
   const fetcher = makeFetcher(config.requestTimeoutMs)
+  const accepted: Source[] = []
+  const dropped: string[] = []
   for (const s of added) {
     try {
       const raw = await fetchSource({ company: s.company, ats: s.ats as AtsKind, board: s.board }, fetcher)
@@ -71,17 +85,27 @@ async function main() {
           const loc = classifyLocations(j.locations)
           return loc.cities.includes('Bengaluru') || loc.cities.includes('Hyderabad')
         }).length
-      if (local === 0) problems.push(`${key(s)} lists no engineering roles in Bengaluru or Hyderabad`)
-      else console.log(`OK  ${key(s).padEnd(32)} ${local} matching role(s)`)
+      if (local === 0) dropped.push(`${key(s)}: no engineering roles in Bengaluru or Hyderabad`)
+      else {
+        accepted.push(s)
+        console.log(`OK   ${key(s).padEnd(32)} ${local} matching role(s)`)
+      }
     } catch (err) {
-      problems.push(`${key(s)} unreachable: ${err instanceof Error ? err.message : String(err)}`)
+      dropped.push(`${key(s)}: unreachable (${err instanceof Error ? err.message : String(err)})`)
     }
   }
-  if (problems.length) {
-    console.error(`REJECTED:\n- ${problems.join('\n- ')}`)
+  for (const d of dropped) console.log(`DROP ${d}`)
+  if (!accepted.length) {
+    console.error('REJECTED: no proposed board passed verification.')
     process.exit(1)
   }
-  console.log(`ACCEPTED ${added.length} new source(s).`)
+  if (writeAccepted) {
+    const file = JSON.parse(readFileSync(basePath, 'utf8')) as Record<string, unknown>
+    writeFileSync(current, `${JSON.stringify({ ...file, sources: [...base, ...accepted] }, null, 2)}\n`)
+  } else if (dropped.length) {
+    process.exit(1)
+  }
+  console.log(`ACCEPTED ${accepted.length} new source(s)${dropped.length ? `, dropped ${dropped.length}` : ''}.`)
 }
 
 if (process.argv[1] && /verify-sources\.ts$/.test(process.argv[1])) await main()

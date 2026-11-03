@@ -3,8 +3,8 @@ name: Auto-merge discovered sources
 # AI phase A4. The daily Claude routine pushes newly discovered job boards to a branch named
 # claude/sources-<date>. This workflow merges it into main ONLY if the branch changes nothing
 # but collector/sources.json, adds (never removes or edits) entries, every new board really lists
-# engineering roles in Bengaluru or Hyderabad, and the test suite passes. Otherwise it fails and
-# main is untouched.
+# engineering roles in Bengaluru or Hyderabad (boards that fail are dropped, the rest merged), and the
+# test suite passes. Otherwise it fails and main is untouched.
 on:
   push:
     branches:
@@ -43,16 +43,16 @@ jobs:
       - name: Verify new sources
         run: |
           git show origin/main:collector/sources.json > "$RUNNER_TEMP/base-sources.json"
-          node collector/verify-sources.ts "$RUNNER_TEMP/base-sources.json"
+          node collector/verify-sources.ts "$RUNNER_TEMP/base-sources.json" --write-accepted
       - name: Tests
         run: npm test
       - name: Merge into main and delete the branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          sources_from="$(git rev-parse HEAD)"
+          cp collector/sources.json "$RUNNER_TEMP/accepted-sources.json"
           git checkout -B main origin/main
-          git checkout "$sources_from" -- collector/sources.json
+          cp "$RUNNER_TEMP/accepted-sources.json" collector/sources.json
           git commit -m "feat(sources): add boards found by the daily discovery routine [skip ci]" -m "From ${GITHUB_REF_NAME}, verified by auto-sources."
           git push origin main
           git push origin --delete "${GITHUB_REF_NAME}"
