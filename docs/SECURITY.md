@@ -32,7 +32,8 @@ Reviewed against `IMPLEMENTATION_PLAN.md` §2 on 2026-11-02.
 - The list of tracked companies in `collector/sources.json` is public.
 - Once you hand an AI context file to Claude, it is outside JobIntel's control and processed under your Claude
   account's settings. Review what is shared in the preview, and prefer leaving the sensitive switches off.
-- Unattended automation with a personal subscription login (planned A2/A3) is not enabled: Anthropic's terms for it
-  have not been verified.
+- A daily Claude routine runs unattended on the owner's subscription (A3, approved by the owner on 2026-11-03).
+  It reads the private repository and the public feed; it cannot send messages or apply anywhere, and only notes
+  and follow-up dates are applied without a click. Pause it at claude.ai/code/routines.
 - localStorage holds only UI conveniences: the last profile section, whether reminders are on, and the date
   of the last reminder.
