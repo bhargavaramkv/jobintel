@@ -176,6 +176,18 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
   progress. Legacy applied records without history count as Applied.
 - Charts are plain HTML/CSS (single-series bars in the accent colour with direct value labels); no chart library.
 
+## AI assistant (A1)
+
+Full design: [`AI_AUTOMATION_ARCHITECTURE.md`](AI_AUTOMATION_ARCHITECTURE.md). In short:
+
+- IndexedDB **v5** adds `aiRecommendations`, `aiBriefings` and `aiExports` (data schema 5). Backups carry them with
+  `.default([])`, so schemas 1–4 still restore.
+- `src/domain/ai/` is pure: `schema.ts` (versioned Zod contract), `context.ts` (allowlist export), `import.ts`
+  (tolerant parse, per-item validation, import review), `apply.ts` (accepted recommendation → one job-record change
+  via the existing `with*` helpers) and `lifecycle.ts` (generated → reviewed → accepted / rejected).
+- `src/features/ai/` holds the Assistant page, using `createRecordContext` for the three stores.
+- The app makes no request to any AI service; the CSP (`connect-src 'self'`) would block one.
+
 ## Reliability & polish (Phase 9)
 
 - Routes other than the dashboard use React Router `lazy`, so each screen is its own chunk.

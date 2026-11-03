@@ -2,6 +2,45 @@
 
 All planned phases (1–9) are implemented. See `docs/SECURITY.md` and `docs/RECOVERY.md`.
 
+## AI automation (separate track, A1–A8)
+
+Design: `docs/AI_AUTOMATION_ARCHITECTURE.md`. Plan and gates: `docs/AI_AUTOMATION_ROADMAP.md`.
+Numbered A1–A8 so they don't collide with phases 1–9 below.
+
+| Phase | Capability | Status |
+|---|---|---|
+| A1 | AI foundation: consented context export, schema v1, recommendation inbox, daily briefing | ✅ Implemented |
+| A2 | Local scheduled runs | ⏳ Planned. Blocked on confirming Anthropic's terms allow unattended subscription use |
+| A3 | Cloud scheduled task for the daily briefing | ⏳ Planned. Needs your decision (private repo holding a minimal export) |
+| A4 | Company and ATS-board discovery with AI relevance judgement | ⏳ Planned |
+| A5 | AI-assisted referral research and evidence-based outreach | ⏳ Planned |
+| A6 | Job-specific resume analysis and tailoring | ⏳ Planned |
+| A7 | Application status extraction from email | ⏳ Planned |
+| A8 | Adaptive interview and career preparation | ⏳ Planned |
+
+### A1: AI foundation ✅
+
+- [x] **Assistant** page (`#/assistant`): Daily briefing, Recommendations, Export & import
+- [x] Context export by **allowlist** with switches. Sensitive items (name, employers, schools, compensation, private notes, lead names) are off by default; message text, lead links/notes and files are never exported
+- [x] **Preview of the exact file** (bytes, approximate tokens) and a **consent tick for every export**; any change to what is shared resets it; exports are logged as counts only
+- [x] Hand-off is manual by design: download the file or copy it as a chat prompt and give it to Claude on your own subscription. JobIntel never contacts Claude and holds no API key
+- [x] Versioned result schema (`jobintel-ai-result` v1), validated with Zod: evidence and confidence required, a four-action whitelist (shortlist, not-interested, add-note, set-follow-up), no send or submit action
+- [x] Tolerant import (code fences, surrounding prose) with **per-item validation**: valid items are kept, rejected ones are listed with reasons, and nothing is stored until you confirm
+- [x] Import warnings for unknown exports, stale or future-dated results, unknown job ids, and already-imported items (re-import never resets your decisions)
+- [x] **Recommendation inbox** with visible states: Generated → Reviewed → Accepted / Rejected (text label plus dot, counts in the header)
+- [x] Accept applies one change through the existing job-action helpers and **re-checks the live record**, so a stale suggestion can't overwrite a newer decision
+- [x] AI daily briefing view and a dashboard panel (latest headline, recommendations to review)
+- [x] IndexedDB v5 (`aiRecommendations`, `aiBriefings`, `aiExports`), data schema 5. Older backups (schemas 1–4) still restore; AI data is in encrypted backups and cleared by "Clear data"
+- [x] `check:dist` fails on an AI API host or on AI field/format names in public `data/`
+- [x] Tests: privacy (sentinel strings), schema and malformed output, apply rules, lifecycle, migration, backup compatibility, UI flow, and an end-to-end run with zero external requests
+
+#### Known limitations
+
+- The hand-off is manual. A website can't start a Claude session by itself, and nothing runs on a schedule yet (A2/A3).
+- Whether unattended use of a personal subscription token is allowed by Anthropic's terms is **not verified**; see the roadmap.
+- Recommendations can't add leads, edit the profile or change stages beyond shortlist. Those need schema v2.
+- The doc part of the knowledge graph (`graphify-out/`) was not re-extracted for these docs; run `/graphify . --update`.
+
 ## Phase 1: app shell, dark UX, local profile ✅
 
 - [x] React + TypeScript + Vite static build, `base: /jobintel/`

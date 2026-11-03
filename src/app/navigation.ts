@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Radar,
   Send,
+  Sparkles,
   UserRound,
   Users,
   type LucideIcon,
@@ -16,6 +17,7 @@ export type NavItem =
 /** Planned entries never route anywhere. */
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard, kind: 'active', path: '/' },
+  { id: 'assistant', label: 'AI Assistant', shortLabel: 'AI', icon: Sparkles, kind: 'active', path: '/assistant' },
   { id: 'discovery', label: 'Job Discovery', shortLabel: 'Jobs', icon: Radar, kind: 'active', path: '/jobs' },
   { id: 'referrals', label: 'Referrals', shortLabel: 'Refs', icon: Users, kind: 'active', path: '/referrals' },
   { id: 'outreach', label: 'Outreach', shortLabel: 'Reach', icon: Send, kind: 'active', path: '/outreach' },

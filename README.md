@@ -102,6 +102,20 @@ encrypted backups. JobIntel learns from them in the browser and re-ranks every n
 companies you rejected, demotes seniority levels and role types you passed on, and promotes roles
 like the ones you applied to. Each card explains why it was moved.
 
+## AI assistant (A1)
+
+The *AI Assistant* page turns your own records into recommendations, without a server or an API key. You choose
+what to share, **preview the exact file**, tick a consent box, and give the file to Claude yourself (a chat on
+claude.ai, or `claude -p`, using your own subscription). You then import Claude's answer: it is checked against a
+strict, versioned format, shown to you with anything rejected listed, and added to a **recommendation inbox** as
+*Generated*. Each recommendation carries its evidence and confidence, and changes a job record only when you
+**Accept** it; accepting re-checks the record as it is now. Nothing is ever sent or submitted automatically.
+
+Name, employers, schools, compensation, private notes and lead names are off by default, and message text, lead
+links and files are never exported. See [`docs/AI_AUTOMATION_ARCHITECTURE.md`](docs/AI_AUTOMATION_ARCHITECTURE.md)
+for the design and privacy boundaries, and [`docs/AI_AUTOMATION_ROADMAP.md`](docs/AI_AUTOMATION_ROADMAP.md) for what
+comes next.
+
 ## Development
 
 ```bash

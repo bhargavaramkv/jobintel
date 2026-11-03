@@ -26,6 +26,13 @@ const MIGRATIONS: Array<(db: IDBDatabase, tx: IDBTransaction) => void> = [
     db.createObjectStore(STORES.outreach, { keyPath: 'id' })
     tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: SCHEMA_VERSION })
   },
+  // v4 -> v5: AI recommendation inbox, briefings and the export consent log (AI Phase 1)
+  (db, tx) => {
+    db.createObjectStore(STORES.aiRecommendations, { keyPath: 'id' })
+    db.createObjectStore(STORES.aiBriefings, { keyPath: 'id' })
+    db.createObjectStore(STORES.aiExports, { keyPath: 'id' })
+    tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: SCHEMA_VERSION })
+  },
 ]
 
 export function runMigrations(db: IDBDatabase, tx: IDBTransaction, oldVersion: number): void {

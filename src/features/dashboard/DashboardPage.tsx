@@ -31,6 +31,7 @@ import { useProfile } from '../profile/useProfile'
 import { greetingFor } from './greeting'
 import { NEXT_MILESTONE, ROADMAP } from './roadmap'
 import { RemindersPanel } from '../reminders/RemindersPanel'
+import { AiDashboardPanel } from '../ai/AiDashboardPanel'
 import './dashboard.css'
 
 interface Kpi {
@@ -237,6 +238,7 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
 
         <aside className="rail-col" aria-label="Setup and milestones">
           <RemindersPanel now={now} />
+          <AiDashboardPanel now={now} />
           <section className="panel" aria-labelledby="setup-title">
             <div className="panel__header">
               <h2 id="setup-title" className="panel__title">

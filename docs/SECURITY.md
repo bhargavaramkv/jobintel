@@ -17,6 +17,9 @@ Reviewed against `IMPLEMENTATION_PLAN.md` §2 on 2026-11-02.
 | Relationship claims | ✅ | Relationships are derived from recorded facts; there is no field to assert one. |
 | GitHub Actions permissions | ✅ | Workflows default to `contents: read`; the scan job alone gets `contents: write`, the alert job `issues: write`, deploy `pages`/`id-token`. Only `GITHUB_TOKEN` is used. |
 | Dependencies | ✅ | `npm audit`: 0 vulnerabilities (2026-11-02). Lockfile committed; CI uses `npm ci`. |
+| AI context export | ✅ | Built by allowlist, previewed byte for byte, consent required for every export and reset on any change. Sensitive items default off; message text, lead links and files are never exported. Exports are logged as counts only. See `AI_AUTOMATION_ARCHITECTURE.md` §4. |
+| AI output is untrusted | ✅ | Strict Zod schema, per-item validation, action whitelist with no send/submit/delete, evidence required, nothing applied on import, and a re-check against the live record on accept. Rendered as text. |
+| No AI service or key in the bundle | ✅ | `check:dist` rejects AI API hosts and key patterns; the CSP blocks cross-origin requests; E2E fails on any request leaving the origin during the AI flow. |
 | Accessibility | ✅ | axe-core (WCAG 2 A/AA) runs on every screen at desktop, tablet and mobile widths in E2E; serious/critical violations fail CI. |
 
 ## Residual risks
@@ -25,5 +28,9 @@ Reviewed against `IMPLEMENTATION_PLAN.md` §2 on 2026-11-02.
 - Anyone with access to your unlocked browser profile can read IndexedDB. Use an OS account password, and
   clear data on shared machines.
 - The list of tracked companies in `collector/sources.json` is public.
+- Once you hand an AI context file to Claude, it is outside JobIntel's control and processed under your Claude
+  account's settings. Review what is shared in the preview, and prefer leaving the sensitive switches off.
+- Unattended automation with a personal subscription login (planned A2/A3) is not enabled: Anthropic's terms for it
+  have not been verified.
 - localStorage holds only UI conveniences: the last profile section, whether reminders are on, and the date
   of the last reminder.

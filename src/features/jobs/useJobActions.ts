@@ -23,6 +23,8 @@ export interface JobActionsContextValue {
   removeStage: (jobId: string) => Promise<void>
   /** Save application details (next action, follow-up date, interviews…). */
   updateDetails: (jobId: string, details: ApplicationDetails) => Promise<void>
+  /** Persist an already-built record (validated by the repository). Used when accepting an AI recommendation. */
+  putAction: (action: JobAction) => Promise<void>
 }
 
 export const JobActionsContext = createContext<JobActionsContextValue | null>(null)

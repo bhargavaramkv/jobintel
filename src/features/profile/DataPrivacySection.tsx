@@ -11,6 +11,7 @@ import {
   restoreFromText,
   type BackupPayload,
 } from '../../storage/backup'
+import { useAiBriefings, useAiExports, useAiRecommendations } from '../ai/aiContext'
 import { useJobActions } from '../jobs/useJobActions'
 import { useContacts } from '../referrals/useContacts'
 import { useOutreach } from '../outreach/outreachContext'
@@ -31,6 +32,9 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
   const { actions: jobActions, replaceAll } = useJobActions()
   const { contacts, replaceAll: replaceContacts } = useContacts()
   const { messages, replaceAll: replaceMessages } = useOutreach()
+  const { recommendations: aiRecs, replaceAll: replaceAiRecs } = useAiRecommendations()
+  const { briefings: aiBriefings, replaceAll: replaceAiBriefings } = useAiBriefings()
+  const { replaceAll: replaceAiExports } = useAiExports()
   const [exportOpen, setExportOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
@@ -64,7 +68,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
           <li>
             <KeyRound size={18} aria-hidden="true" />
             <div>
-              <strong>Backups are encrypted with your passphrase</strong> and include your profile plus applied / not-interested decisions and notes. AES-256-GCM with a PBKDF2-derived key. If you
+              <strong>Backups are encrypted with your passphrase</strong> and include your profile, job decisions and notes, referral leads, outreach history and AI recommendations. AES-256-GCM with a PBKDF2-derived key. If you
               lose the passphrase, the backup cannot be recovered by anyone.
             </div>
           </li>
@@ -91,7 +95,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
               type="button"
               className="btn btn--secondary"
               onClick={() => setExportOpen(true)}
-              disabled={!profile && jobActions.size === 0 && contacts.size === 0 && messages.size === 0}
+              disabled={!profile && jobActions.size === 0 && contacts.size === 0 && messages.size === 0 && aiRecs.size === 0 && aiBriefings.size === 0}
               title={profile ? undefined : 'Save a profile first'}
             >
               <Download size={15} aria-hidden="true" /> Export
@@ -136,6 +140,9 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
           await replaceAll(payload.jobActions)
           await replaceContacts(payload.contacts)
           await replaceMessages(payload.messages)
+          await replaceAiRecs(payload.aiRecommendations)
+          await replaceAiBriefings(payload.aiBriefings)
+          await replaceAiExports(payload.aiExports)
           setImportOpen(false)
           setNotice({ kind: 'success', text: 'Backup restored. Your profile has been replaced.' })
         }}
@@ -168,6 +175,9 @@ function ExportDialog({
   const { actions: jobActions } = useJobActions()
   const { contacts } = useContacts()
   const { messages } = useOutreach()
+  const { recommendations: aiRecs } = useAiRecommendations()
+  const { briefings: aiBriefings } = useAiBriefings()
+  const { exports: aiExports } = useAiExports()
   const [pass, setPass] = useState('')
   const [confirm, setConfirm] = useState('')
   const [ack, setAck] = useState(false)
@@ -195,6 +205,9 @@ function ExportDialog({
         jobActions: [...jobActions.values()],
         contacts: [...contacts.values()],
         messages: [...messages.values()],
+        aiRecommendations: [...aiRecs.values()],
+        aiBriefings: [...aiBriefings.values()],
+        aiExports: [...aiExports.values()],
       })
       downloadJson(backupFileName(), envelope)
       setPass('')
