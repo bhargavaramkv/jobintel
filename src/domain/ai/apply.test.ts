@@ -4,6 +4,7 @@ import { makeJob } from '../../test/feedFixture'
 import { storedRec } from '../../test/aiFixture'
 import { planApply, type ApplyContext } from './apply'
 import type { ProposedAction } from './schema'
+import type { Contact } from '../referrals/contacts'
 
 const now = new Date('2026-11-03T08:00:00.000Z')
 const job = makeJob({ sourceId: '1', company: 'Acme', title: 'Backend Engineer' })
@@ -116,5 +117,47 @@ describe('applying an accepted recommendation', () => {
     const before = JSON.stringify(shortlisted)
     planApply(rec({ type: 'set-follow-up', followUpOn: '2026-11-10' }), ctx([shortlisted]))
     expect(JSON.stringify(shortlisted)).toBe(before)
+  })
+})
+
+describe('v2 actions', () => {
+  const lead = { type: 'add-lead' as const, name: 'Jane Doe', company: 'Acme', role: 'EM', sourceUrl: 'https://example.com/team', reason: 'Leads the team' }
+  const leadRec = storedRec({ kind: 'lead-proposal', jobId: undefined, action: lead })
+  const withContacts = (contacts: Contact[] = []): ApplyContext => ({ ...ctx(), contacts: new Map(contacts.map((c) => [c.id, c])), newId: () => 'lead-1' })
+
+  it('add-lead creates an unconfirmed lead with its source, never a relationship', () => {
+    const p = okPlan(planApply(leadRec, withContacts()))
+    expect(p.next).toBeNull()
+    expect(p.contact).toMatchObject({ id: 'lead-1', name: 'Jane Doe', company: 'Acme', sourceUrl: 'https://example.com/team', knowsPersonally: false, workedTogether: false, status: 'new' })
+    expect(p.contact!.note).toMatch(/Suggested by AI/)
+  })
+
+  it('add-lead refuses duplicates by link or by name at the same company', () => {
+    const first = okPlan(planApply(leadRec, withContacts())).contact!
+    expect(refusal(planApply(leadRec, withContacts([first])))).toMatch(/already have a lead with this link/)
+    const sameName = storedRec({ kind: 'lead-proposal', jobId: undefined, action: { ...lead, sourceUrl: 'https://other.example/x' } })
+    expect(refusal(planApply(sameName, withContacts([first])))).toMatch(/already have Jane Doe at Acme/)
+  })
+
+  const stageRec = (stage: 'applied' | 'interview' | 'offer' | 'rejected') => rec({ type: 'set-stage', stage, note: 'From email' })
+
+  it('set-stage moves forward and records the evidence in history', () => {
+    const applied = withApplied(refOf(job), undefined, now)
+    const p = okPlan(planApply(stageRec('interview'), ctx([applied])))
+    expect(p.next).toMatchObject({ stage: 'interview' })
+    expect(p.next!.history!.at(-1)!.note).toBe('From email')
+  })
+
+  it('set-stage never moves backwards or reopens a closed application', () => {
+    const interviewing = withStage(refOf(job), undefined, 'interview', now)
+    expect(refusal(planApply(stageRec('applied'), ctx([interviewing])))).toMatch(/backwards/)
+    const offer = withStage(refOf(job), undefined, 'offer', now)
+    expect(refusal(planApply(stageRec('rejected'), ctx([offer])))).toMatch(/closed/)
+    expect(refusal(planApply(stageRec('interview'), ctx([interviewing])))).toMatch(/Already at/)
+  })
+
+  it('set-stage can record a rejection from any active stage', () => {
+    const interviewing = withStage(refOf(job), undefined, 'interview', now)
+    expect(okPlan(planApply(stageRec('rejected'), ctx([interviewing]))).next).toMatchObject({ stage: 'rejected' })
   })
 })

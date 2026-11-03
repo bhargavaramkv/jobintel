@@ -13,6 +13,7 @@ import {
   type JobRef,
 } from '../jobs/actions'
 import type { Job } from '../jobs/feedSchema'
+import { contactSchema, type Contact } from '../referrals/contacts'
 import type { StoredRecommendation } from './schema'
 
 /**
@@ -26,11 +27,20 @@ export interface ApplyContext {
   actions: ReadonlyMap<string, JobAction>
   jobs: ReadonlyMap<string, Job>
   now: Date
+  /** Referral leads, for `add-lead` de-duplication. */
+  contacts?: ReadonlyMap<string, Contact>
+  /** Id generator for new leads (injected so planning stays pure in tests). */
+  newId?: () => string
 }
 
 export type ApplyPlan =
-  | { ok: true; summary: string; next: JobAction | null }
+  | { ok: true; summary: string; next: JobAction | null; contact?: Contact }
   | { ok: false; reason: string }
+
+const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+const normUrl = (s: string) => s.toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '')
+/** Pipeline order; `rejected` (by the company) can follow any active stage. */
+const STAGE_RANK: Record<string, number> = { shortlisted: 0, 'referral-requested': 1, referred: 2, applied: 3, interview: 4, offer: 5, rejected: 5 }
 
 const refuse = (reason: string): ApplyPlan => ({ ok: false, reason })
 
@@ -44,6 +54,37 @@ function refFor(jobId: string, ctx: ApplyContext): { ref: JobRef; job?: Job } | 
 export function planApply(rec: StoredRecommendation, ctx: ApplyContext): ApplyPlan {
   const { action } = rec
   if (action.type === 'none') return { ok: true, summary: 'Acknowledged. No records were changed.', next: null }
+
+  if (action.type === 'add-lead') {
+    const existing = [...(ctx.contacts?.values() ?? [])]
+    const urls = new Set(existing.flatMap((c) => [c.sourceUrl, c.profileUrl].filter((u): u is string => !!u).map(normUrl)))
+    if (urls.has(normUrl(action.sourceUrl)) || (action.profileUrl && urls.has(normUrl(action.profileUrl)))) {
+      return refuse('You already have a lead with this link.')
+    }
+    if (existing.some((c) => normName(c.name) === normName(action.name) && normName(c.company) === normName(action.company))) {
+      return refuse(`You already have ${action.name} at ${action.company} as a lead.`)
+    }
+    const at = ctx.now.toISOString()
+    const parsed = contactSchema.safeParse({
+      id: (ctx.newId ?? (() => `ai-${ctx.now.getTime().toString(36)}`))(),
+      name: action.name,
+      company: action.company,
+      ...(action.role ? { role: action.role } : {}),
+      ...(action.profileUrl ? { profileUrl: action.profileUrl } : {}),
+      sourceUrl: action.sourceUrl,
+      pastCompanies: [],
+      schools: [],
+      // Never asserted by AI: the user confirms relationships themselves.
+      knowsPersonally: false,
+      workedTogether: false,
+      status: 'new',
+      note: `Suggested by AI: ${action.reason}`.slice(0, 1000),
+      createdAt: at,
+      updatedAt: at,
+    })
+    if (!parsed.success) return refuse('The suggested lead is not valid.')
+    return { ok: true, summary: `Added ${action.name} (${action.company}) as a referral lead.`, next: null, contact: parsed.data }
+  }
 
   const jobId = rec.jobId
   if (!jobId) return refuse('The recommendation names no job.')
@@ -76,6 +117,19 @@ export function planApply(rec: StoredRecommendation, ctx: ApplyContext): ApplyPl
       const combined = current ? `${current}\n\n${stamped}` : stamped
       if (combined.length > NOTE_MAX) return refuse('Adding this would make the note longer than the allowed length.')
       return { ok: true, summary: `Added a note to ${label}.`, next: withNote(ref, existing, combined, ctx.now) }
+    }
+    case 'set-stage': {
+      if (stage === action.stage) return refuse(`Already at ${STAGE_LABEL[stage]}.`)
+      if (stage && !isActiveStage(stage)) return refuse(`This application is closed (${STAGE_LABEL[stage]}).`)
+      if (existing?.decision === 'rejected' && !stage) return refuse('You marked this Not interested.')
+      if (stage && STAGE_RANK[action.stage] <= STAGE_RANK[stage]) {
+        return refuse(`That would move it backwards (from ${STAGE_LABEL[stage]} to ${STAGE_LABEL[action.stage]}).`)
+      }
+      return {
+        ok: true,
+        summary: `Moved ${label} to ${STAGE_LABEL[action.stage]}.`,
+        next: withStage(ref, existing, action.stage, ctx.now, action.note ?? 'From an AI-detected update'),
+      }
     }
     case 'set-follow-up': {
       if (!existing || !isActiveStage(stage)) return refuse('Follow-ups can only be set on a job in your active pipeline.')

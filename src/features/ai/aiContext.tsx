@@ -1,5 +1,5 @@
-import type { ExportRecord, StoredBriefing, StoredRecommendation } from '../../domain/ai/schema'
-import { aiBriefingsRepository, aiExportsRepository, aiRecommendationsRepository } from '../../storage/aiRepository'
+import { AUTOMATION_ID, type AutomationSettings, type ExportRecord, type StoredBriefing, type StoredRecommendation } from '../../domain/ai/schema'
+import { aiBriefingsRepository, aiExportsRepository, aiRecommendationsRepository, aiSettingsRepository } from '../../storage/aiRepository'
 import { createRecordContext } from '../shared/recordContext'
 
 /**
@@ -35,4 +35,15 @@ export function useAiBriefings() {
 export function useAiExports() {
   const { items, ...rest } = useExportLogRecords()
   return { exports: items, ...rest }
+}
+
+export const { Provider: AiSettingsProvider, useRecords: useAiSettingsRecords } = createRecordContext<AutomationSettings>(
+  'AI automation settings',
+  aiSettingsRepository,
+)
+
+/** The single automation settings record, if the user has set automation up. */
+export function useAutomationSettings() {
+  const { items, ...rest } = useAiSettingsRecords()
+  return { settings: items.get(AUTOMATION_ID), ...rest }
 }

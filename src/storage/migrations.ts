@@ -33,6 +33,11 @@ const MIGRATIONS: Array<(db: IDBDatabase, tx: IDBTransaction) => void> = [
     db.createObjectStore(STORES.aiExports, { keyPath: 'id' })
     tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: SCHEMA_VERSION })
   },
+  // v5 -> v6: automation settings (private-repo sync, stored resume) (AI A2-A8)
+  (db, tx) => {
+    db.createObjectStore(STORES.aiSettings, { keyPath: 'id' })
+    tx.objectStore(STORES.meta).put({ key: 'schemaVersion', value: SCHEMA_VERSION })
+  },
 ]
 
 export function runMigrations(db: IDBDatabase, tx: IDBTransaction, oldVersion: number): void {

@@ -1,4 +1,4 @@
-import { exportRecordSchema, storedBriefingSchema, storedRecommendationSchema } from '../domain/ai/schema'
+import { automationSettingsSchema, exportRecordSchema, storedBriefingSchema, storedRecommendationSchema } from '../domain/ai/schema'
 import { STORES } from './db'
 import { recordStore } from './recordStore'
 
@@ -10,3 +10,6 @@ export const aiBriefingsRepository = recordStore(STORES.aiBriefings, storedBrief
 
 /** What was exported for AI processing and when (counts and switches only, no candidate data). */
 export const aiExportsRepository = recordStore(STORES.aiExports, exportRecordSchema)
+
+/** Automation settings (one record, id 'automation'). Holds the access token: never put it in a backup. */
+export const aiSettingsRepository = recordStore(STORES.aiSettings, automationSettingsSchema)

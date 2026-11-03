@@ -28,8 +28,8 @@ const expectCode = async (p: Promise<unknown>, code: BackupError['code']) => {
 }
 
 describe('backup with AI recommendations (data schema 5)', () => {
-  it('is data schema 5', () => {
-    expect(SCHEMA_VERSION).toBe(5)
+  it('is data schema 6', () => {
+    expect(SCHEMA_VERSION).toBe(6)
   })
 
   it('round-trips recommendations, briefings and the export log, including their review state', async () => {
@@ -85,6 +85,27 @@ describe('backup with AI recommendations (data schema 5)', () => {
   })
 
   it('still refuses a backup from a newer data schema', async () => {
-    await expectCode(decryptBackup(await forge({ schemaVersion: 6, exportedAt: 'x', profile: null }), PASS), 'unsupported-version')
+    await expectCode(decryptBackup(await forge({ schemaVersion: 7, exportedAt: 'x', profile: null }), PASS), 'unsupported-version')
+  })
+})
+
+describe('automation settings in backups (data schema 6)', () => {
+  it('never includes the GitHub token, but keeps the rest', async () => {
+    const settings = {
+      id: 'automation' as const,
+      repo: 'owner/private-repo',
+      token: 'github_pat_SECRETVALUE1234567890',
+      autoSync: true,
+      exportOptions: { profile: true, identity: false, compensation: false, pipeline: true, applications: true, notes: false, referrals: true, referralNames: false, topMatches: 10, resume: true },
+      autoAcceptLowRisk: true,
+      resumeText: 'My resume',
+      importedResults: [],
+      updatedAt: '2026-11-03T00:00:00.000Z',
+    }
+    const env = await createBackup(null, PASS, { ...FAST, aiSettings: [settings] })
+    const restored = await restoreFromText(JSON.stringify(env), PASS)
+    expect(restored.aiSettings).toHaveLength(1)
+    expect(restored.aiSettings[0].token).toBeUndefined()
+    expect(restored.aiSettings[0]).toMatchObject({ repo: 'owner/private-repo', resumeText: 'My resume', autoSync: true })
   })
 })

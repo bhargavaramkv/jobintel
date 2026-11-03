@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { countByStatus } from '../../domain/ai/lifecycle'
 import { useAiRecommendations } from './aiContext'
+import { AutomationPanel } from './AutomationPanel'
 import { BriefingPanel } from './BriefingPanel'
 import { ExportPanel } from './ExportPanel'
 import { InboxPanel } from './InboxPanel'
@@ -9,7 +10,8 @@ import './ai.css'
 const TABS = [
   { id: 'briefing', label: 'Daily briefing' },
   { id: 'inbox', label: 'Recommendations' },
-  { id: 'bridge', label: 'Export & import' },
+  { id: 'automation', label: 'Automation' },
+  { id: 'bridge', label: 'Manual export & import' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 const isTab = (v: string | null): v is TabId => TABS.some((t) => t.id === v)
@@ -28,7 +30,7 @@ export function AssistantPage() {
         <p className="eyebrow">AI assistant</p>
         <h1 className="ai__title">Claude proposes. You decide.</h1>
         <p className="secondary ai__lede">
-          Recommendations come from a file you hand to Claude yourself. Each one shows its evidence and confidence, is validated before it is
+          Recommendations come from a daily Claude routine on your own subscription (or a file you hand over yourself). Each one shows its evidence and confidence, is validated before it is
           shown, and changes your records only if you accept it. Nothing is ever applied to a job or sent to anyone automatically.
         </p>
       </header>
@@ -54,6 +56,7 @@ export function AssistantPage() {
       <div id="ai-panel" role="tabpanel" aria-labelledby={`ai-tab-${tab}`} className="ai__panel">
         {tab === 'briefing' && <BriefingPanel />}
         {tab === 'inbox' && <InboxPanel />}
+        {tab === 'automation' && <AutomationPanel />}
         {tab === 'bridge' && <ExportPanel />}
       </div>
     </div>

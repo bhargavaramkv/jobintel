@@ -10,13 +10,31 @@ Numbered A1–A8 so they don't collide with phases 1–9 below.
 | Phase | Capability | Status |
 |---|---|---|
 | A1 | AI foundation: consented context export, schema v1, recommendation inbox, daily briefing | ✅ Implemented |
-| A2 | Local scheduled runs | ⏳ Planned. Blocked on confirming Anthropic's terms allow unattended subscription use |
-| A3 | Cloud scheduled task for the daily briefing | ⏳ Planned. Needs your decision (private repo holding a minimal export) |
-| A4 | Company and ATS-board discovery with AI relevance judgement | ⏳ Planned |
-| A5 | AI-assisted referral research and evidence-based outreach | ⏳ Planned |
-| A6 | Job-specific resume analysis and tailoring | ⏳ Planned |
-| A7 | Application status extraction from email | ⏳ Planned |
-| A8 | Adaptive interview and career preparation | ⏳ Planned |
+| A2 | Scheduled runs without typing anything | ✅ Implemented as part of A3 (a cloud routine runs even with the laptop closed) |
+| A3 | Automated loop: browser ⇄ private repo ⇄ daily Claude routine, auto-import, auto-apply low-risk | ✅ Implemented |
+| A4 | Company and ATS-board discovery with automatic verification and merge | ✅ Implemented |
+| A5 | Referral research (lead proposals with public sources) | ✅ Implemented |
+| A6 | Stored resume + job-specific resume suggestions | ✅ Implemented |
+| A7 | Application status from email (forward stage proposals with quoted evidence) | ✅ Implemented; activates when a Gmail connector is connected in claude.ai |
+| A8 | Interview prep plans | ✅ Implemented |
+
+### A2–A8: automation ✅
+
+- [x] **Automation** tab: connect a private GitHub repo once (fine-grained token, stored only in this browser, never in backups). JobIntel refuses to sync to a public repository
+- [x] Auto-sync while the app is open: the context export (same switches and consent as manual export) and the stored resume are pushed when they change, at most every 30 minutes
+- [x] Auto-import: results written by the daily routine are pulled, validated and added to the inbox; the briefing updates by itself
+- [x] Auto-apply only notes and follow-up dates (confidence ≥ 0.6, switchable); everything else waits for one click, and **Accept all ready** handles a whole day at once
+- [x] Daily Claude routine (08:30 IST) on the owner's subscription; instructions live in the private repo's `docs/daily-routine.md`; it validates its own output with `scripts/validate-ai-result.ts`
+- [x] Schema v2 (v1 still accepted): kinds `resume-suggestion`, `lead-proposal`, `prep-plan`, `application-update`; actions `add-lead` (needs a public source; never asserts a relationship) and `set-stage` (forward only)
+- [x] Discovery: the routine proposes boards on `claude/sources-*`; `auto-sources.yml` merges only additions to `collector/sources.json` that `collector/verify-sources.ts` confirms list engineering roles in Bengaluru/Hyderabad
+- [x] IndexedDB v6 (`aiSettings`), data schema 6; older backups restore
+- [x] CSP `connect-src` now allows `https://api.github.com` (used only for the optional sync)
+
+#### Known limitations
+
+- Sync runs only while JobIntel is open in a browser; the routine itself runs daily regardless and uses the last synced context.
+- A7 needs a Gmail connector connected at claude.ai/customize/connectors; until then the routine skips email.
+- The token is kept in IndexedDB in plain form, like the rest of the local data. Use a fine-grained token scoped to the one private repo.
 
 ### A1: AI foundation ✅
 
@@ -36,10 +54,8 @@ Numbered A1–A8 so they don't collide with phases 1–9 below.
 
 #### Known limitations
 
-- The hand-off is manual. A website can't start a Claude session by itself, and nothing runs on a schedule yet (A2/A3).
-- Whether unattended use of a personal subscription token is allowed by Anthropic's terms is **not verified**; see the roadmap.
-- Recommendations can't add leads, edit the profile or change stages beyond shortlist. Those need schema v2.
-- The doc part of the knowledge graph (`graphify-out/`) was not re-extracted for these docs; run `/graphify . --update`.
+- The manual hand-off remains available under *Manual export & import*; automation (A3) removes the need for it.
+- Recommendations never edit the profile; schema v2 adds leads and forward-only stage changes.
 
 ## Phase 1: app shell, dark UX, local profile ✅
 

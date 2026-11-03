@@ -6,7 +6,6 @@ import {
   chatPrompt,
   DEFAULT_EXPORT_OPTIONS,
   exportRecordOf,
-  MAX_TOP_MATCHES,
   serializeContext,
   type ExportOptions,
 } from '../../domain/ai/context'
@@ -18,20 +17,9 @@ import { useOutreach } from '../outreach/outreachContext'
 import { downloadJson } from '../profile/download'
 import { useProfile } from '../profile/useProfile'
 import { useContacts } from '../referrals/useContacts'
-import { useAiExports } from './aiContext'
+import { useAiExports, useAutomationSettings } from './aiContext'
+import { ExportSwitches } from './ExportSwitches'
 import { ImportDialog } from './ImportDialog'
-
-type Switch = Exclude<keyof ExportOptions, 'topMatches'>
-const SWITCHES: Array<{ key: Switch; label: string; hint: string; sensitive?: boolean; needs?: Switch }> = [
-  { key: 'profile', label: 'Profile preferences', hint: 'Skills, target roles and seniority, locations, work modes, company types, target companies, years of experience, summary.' },
-  { key: 'identity', label: 'Identifying details', hint: 'Your name, current and past employers, schools. Off by default.', sensitive: true, needs: 'profile' },
-  { key: 'compensation', label: 'Compensation and notice period', hint: 'Off by default.', sensitive: true, needs: 'profile' },
-  { key: 'pipeline', label: 'Jobs in your pipeline', hint: 'Shortlisted through offer: the public posting text and the match breakdown.' },
-  { key: 'applications', label: 'Application history', hint: 'Stages, dates, interviews, follow-up dates and Not-interested reasons. No notes.' },
-  { key: 'notes', label: 'Your private notes', hint: 'Free-text notes, next actions, interview notes and company feedback. Off by default.', sensitive: true },
-  { key: 'referrals', label: 'Referral leads', hint: 'Relationship type and confidence plus message counts, only for leads at companies in your pipeline or targets. No contact details, notes or messages.' },
-  { key: 'referralNames', label: 'Names of referral leads', hint: 'Off by default. Recommendations rarely need names.', sensitive: true, needs: 'referrals' },
-]
 
 const NEVER = [
   'Message text and drafts you wrote to people',
@@ -50,6 +38,8 @@ export function ExportPanel() {
   const { messages } = useOutreach()
   const { state } = useJobFeed()
   const { save: saveExport } = useAiExports()
+  const { settings: automation } = useAutomationSettings()
+  const resumeText = automation?.resumeText
   const [options, setOptions] = useState<ExportOptions>(DEFAULT_EXPORT_OPTIONS)
   const [contextId, setContextId] = useState(newContextId)
   const [consent, setConsent] = useState(false)
@@ -61,8 +51,8 @@ export function ExportPanel() {
 
   const jobs = useMemo(() => (state.status === 'ready' ? state.feed.jobs : []), [state])
   const bundle = useMemo(
-    () => buildAiContext({ profile, actions: actions.values(), jobs, contacts: contacts.values(), messages: messages.values(), now: stamp }, options, contextId),
-    [profile, actions, jobs, contacts, messages, options, contextId, stamp],
+    () => buildAiContext({ profile, actions: actions.values(), jobs, contacts: contacts.values(), messages: messages.values(), now: stamp, resumeText }, options, contextId),
+    [profile, actions, jobs, contacts, messages, options, contextId, stamp, resumeText],
   )
   const text = useMemo(() => serializeContext(bundle), [bundle])
   const bytes = useMemo(() => new TextEncoder().encode(text).length, [text])
@@ -115,6 +105,7 @@ export function ExportPanel() {
     ['Best-fit open jobs', options.topMatches > 0 ? String(bundle.topMatches?.length ?? 0) : 'Not included'],
     ['Application records', apps ? `${apps.records.length} + ${apps.notInterested.length} Not-interested summaries` : 'Not included'],
     ['Referral leads', options.referrals ? String(bundle.referrals?.length ?? 0) : 'Not included'],
+    ['Resume', bundle.resume ? `${bundle.resume.length.toLocaleString()} characters` : options.resume ? 'None stored yet (add it under Automation)' : 'Not included'],
   ]
 
   return (
@@ -154,42 +145,7 @@ export function ExportPanel() {
             <p className="panel__subtitle">Sensitive items are off by default. Changing anything asks for consent again.</p>
           </div>
         </div>
-        <fieldset className="panel__body ai-switches">
-          <legend className="sr-only">Data to include in the AI context</legend>
-          {SWITCHES.map((s) => {
-            const blocked = s.needs ? !options[s.needs] : false
-            return (
-              <label key={s.key} className={`ai-switch${blocked ? ' is-disabled' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={options[s.key] && !blocked}
-                  disabled={blocked}
-                  onChange={(e) => set(s.key, e.target.checked)}
-                />
-                <span>
-                  <strong>{s.label}</strong>
-                  {s.sensitive && <span className="badge badge--warning ai-switch__tag">Sensitive</span>}
-                  <span className="field__hint">{s.hint}</span>
-                </span>
-              </label>
-            )
-          })}
-          <div className="ai-switch ai-switch--number">
-            <label htmlFor="top-matches">
-              <strong>Best-fit open jobs to include</strong>
-              <span className="field__hint">Undecided open jobs ranked by the deterministic match engine. 0 shares none.</span>
-            </label>
-            <input
-              id="top-matches"
-              className="input ai-number"
-              type="number"
-              min={0}
-              max={MAX_TOP_MATCHES}
-              value={options.topMatches}
-              onChange={(e) => set('topMatches', Math.max(0, Math.min(MAX_TOP_MATCHES, Math.floor(Number(e.target.value) || 0))))}
-            />
-          </div>
-        </fieldset>
+        <ExportSwitches options={options} onChange={set} className="panel__body" />
       </section>
 
       <section className="panel" aria-labelledby="preview-title">
