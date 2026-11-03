@@ -161,3 +161,22 @@ describe('v2 actions', () => {
     expect(okPlan(planApply(stageRec('rejected'), ctx([interviewing]))).next).toMatchObject({ stage: 'rejected' })
   })
 })
+
+describe('track-job (roles found outside the feed)', () => {
+  const ext = { type: 'track-job' as const, title: 'Senior Software Engineer (.NET)', company: 'Example Labs', url: 'https://example.com/careers/123', location: 'Bengaluru', city: 'Bengaluru' as const, source: 'LinkedIn' }
+  const trackRec = storedRec({ kind: 'job-fit', jobId: undefined, action: ext })
+  const c = (actions: JobAction[] = []): ApplyContext => ({ ...ctx(actions), newId: () => 'x1' })
+
+  it('adds the role to the pipeline as a shortlisted manual entry with its link and source', () => {
+    const p = okPlan(planApply(trackRec, c()))
+    expect(p.next).toMatchObject({ jobId: 'manual:x1', stage: 'shortlisted', snapshot: { ats: 'manual', url: ext.url, cities: ['Bengaluru'], locations: ['Bengaluru'] } })
+    expect(p.next!.history![0].note).toBe('Found by AI on LinkedIn')
+  })
+
+  it('refuses a role already tracked by link or by company and title', () => {
+    const first = okPlan(planApply(trackRec, c())).next!
+    expect(refusal(planApply(trackRec, c([first])))).toMatch(/Already tracked/)
+    const otherLink = storedRec({ kind: 'job-fit', jobId: undefined, action: { ...ext, url: 'https://other.example/job' } })
+    expect(refusal(planApply(otherLink, c([first])))).toMatch(/already have .* in your pipeline/)
+  })
+})

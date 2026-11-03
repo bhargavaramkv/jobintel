@@ -27,6 +27,7 @@ Numbered A1–A8 so they don't collide with phases 1–9 below.
 - [x] Daily Claude routine (08:30 IST) on the owner's subscription; instructions live in the private repo's `docs/daily-routine.md`; it validates its own output with `scripts/validate-ai-result.ts`
 - [x] Schema v2 (v1 still accepted): kinds `resume-suggestion`, `lead-proposal`, `prep-plan`, `application-update`; actions `add-lead` (needs a public source; never asserts a relationship) and `set-stage` (forward only)
 - [x] Discovery: the routine proposes boards on `claude/sources-*`; `auto-sources.yml` merges only additions to `collector/sources.json` that `collector/verify-sources.ts` confirms list engineering roles in Bengaluru/Hyderabad
+- [x] Roles outside the tracked boards (LinkedIn, Naukri, careers pages): the routine proposes them with `track-job`; accepting adds a shortlisted manual entry with the posting link. This replaced the separate twice-daily "Job listings digest" routine
 - [x] IndexedDB v6 (`aiSettings`), data schema 6; older backups restore
 - [x] CSP `connect-src` now allows `https://api.github.com` (used only for the optional sync)
 
