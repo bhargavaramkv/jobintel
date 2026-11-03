@@ -1,6 +1,4 @@
 {
-  "0": "Routing & Job Assessment",
-  "1": "Dev Tooling & E2E Tests",
   "2": "React Dependencies & App Shell",
   "3": "Job Actions & Decisions",
   "4": "Pages Deploy Workflow",
@@ -15,7 +13,6 @@
   "13": "Collector tsconfig",
   "14": "ATS Adapters",
   "15": "Node tsconfig",
-  "16": "Location & Feed Merge",
   "17": "Roadmap Phases & IA",
   "18": "Profile Readiness Rules",
   "19": "Collector Tests & Types",
