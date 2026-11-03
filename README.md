@@ -3,9 +3,7 @@
 A personal, local-first job-search workspace. It runs as a static site on GitHub Pages and keeps your
 candidate profile in your own browser.
 
-**Status:** v0.1. Phase 1 (app shell + local candidate profile) and Phase 2 (job discovery) are done.
-Matching, referrals, outreach, application tracking and analytics are planned. They are **not**
-implemented yet. See
+**Status:** v0.9. All planned phases (1–9) are done: local profile, job discovery, matching, referral leads, outreach, application tracking, automation + reminders, analytics, and a security/accessibility/reliability pass. See [`docs/SECURITY.md`](docs/SECURITY.md), [`docs/RECOVERY.md`](docs/RECOVERY.md),
 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) and [`TODO.md`](TODO.md).
 
 ## Privacy model: read this first
@@ -50,6 +48,52 @@ the feed contains only public posting facts. Note that the list of tracked compa
 - Check a board before adding it: `node collector/probe.ts greenhouse:<board> lever:<site> ashby:<name>`
 - Run a scan from GitHub: Actions → *Job discovery scan* → *Run workflow*
 
+## Matching (Phase 3)
+
+Every job gets an explained **fit score** computed in your browser: technical skills (30%), experience (20%),
+role alignment (20%), location and work mode (10%), seniority (10%) and other requirements (10%). Open
+*Details* on a job to see each factor with what matched and what's missing. Factors without data are left out
+rather than counted as a match, and the card says how much of the score had evidence. Shortlist the jobs you
+want to pursue; they move to the *Shortlisted* tab.
+
+## Referral leads (Phase 4)
+
+*Referrals* lists the companies in your pipeline and helps you record people who could refer you. You find
+them yourself (the app only opens public searches in a new tab), and every lead needs the link where you found
+it. JobIntel never lets you type a relationship as a claim: "former colleague" appears only when the lead's
+companies overlap your own past employers, "alumni" only when colleges overlap, and each label shows whether it
+is **verified** (you confirmed it) or **inferred**. There are no email or phone fields.
+
+## Outreach (Phase 5)
+
+*Outreach* drafts LinkedIn notes, LinkedIn messages and emails for a referral lead, in three tones. The approach
+follows the evidence: a referral is asked for only when you confirmed you know the person or worked together;
+otherwise the draft asks for advice. Every draft lists the facts it used, and you can edit it. JobIntel never
+sends anything: copy the text, send it yourself, then press *I sent it* to log it. Follow-ups are suggested at
+most twice, a week apart, and stop when the person replies.
+
+## Application tracking (Phase 6)
+
+*Applications* follows every job you pursue from shortlist through referral, application, interviews and
+outcome. Each stage change is kept in a history. Record next actions, follow-up dates, interviews, the resume
+version you used, linked referral contacts and feedback. You can add jobs you found elsewhere, and JobIntel
+stops you from tracking the same company and title twice by accident.
+
+## Automation and reminders (Phase 7)
+
+Scans run three times a day in GitHub Actions. *Job Discovery → Sources* shows source health, the last 20 scans
+and roughly when the next one runs. If a scan or deploy fails, the workflow opens a `scan-failure` issue (GitHub
+notifies you) and the last good feed stays online; the next good run closes the issue. The dashboard's *Today*
+panel lists interviews and follow-ups due, and you can turn on a once-a-day browser reminder that works while
+JobIntel is open in a tab.
+
+## Analytics (Phase 8)
+
+*Analytics* turns your own records into a funnel, outreach and referral counts, a by-company table, time to
+response and repeated skill gaps. Every number opens to the records behind it, small samples are flagged, and
+recommendations show their evidence. Comparisons between groups are labelled as correlations. Nothing leaves the
+browser unless you press *Export CSV*.
+
 ## Applied tracking and feedback
 
 On each job you can **Mark applied**, mark it **Not interested** (with optional reasons), and add a
@@ -81,6 +125,12 @@ not deploy.
 The site is a **project site** at `https://<user>.github.io/jobintel/`, so Vite's `base` is
 `/jobintel/`. If you rename the repository or use a custom domain, set `VITE_BASE_PATH` at build
 time. Routing uses `HashRouter` (`#/profile`), so refreshing a deep link never returns a 404.
+
+## Security and recovery
+
+See [`docs/SECURITY.md`](docs/SECURITY.md) for the security and privacy review (CSP, dist checks, backups,
+workflow permissions) and [`docs/RECOVERY.md`](docs/RECOVERY.md) for restoring data, fixing a stale feed and
+supported browsers.
 
 ## Architecture
 

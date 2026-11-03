@@ -62,3 +62,34 @@ jobs:
       contents: read
       pages: write
       id-token: write
+
+  # Alerting: a failed scan or deploy opens (or comments on) one "scan-failure" issue, which
+  # notifies the repository owner. The next successful run closes it. The last good feed stays live.
+  alert:
+    needs: [scan, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the scan-failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SCAN: ${{ needs.scan.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create scan-failure --color D93F0B --description "Scheduled job scan or deploy failed" 2>/dev/null || true
+          open=$(gh issue list --label scan-failure --state open --json number --jq '.[0].number // empty')
+          if [ "$SCAN" = "success" ] && { [ "$DEPLOY" = "success" ] || [ "$DEPLOY" = "skipped" ]; }; then
+            if [ -n "$open" ]; then gh issue close "$open" --comment "Scan and deploy succeeded again: $RUN_URL"; fi
+            exit 0
+          fi
+          body="Job discovery run failed (scan: $SCAN, deploy: $DEPLOY). The last good feed stays published. Details: $RUN_URL"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body "$body"
+          else
+            gh issue create --title "Job discovery scan failing" --label scan-failure --body "$body"
+          fi

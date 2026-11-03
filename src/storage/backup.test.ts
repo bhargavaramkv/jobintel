@@ -149,3 +149,26 @@ describe('backup with job decisions (data schema 2)', () => {
     expect(restored.jobActions).toEqual([])
   })
 })
+
+describe('backup with referral leads (data schema 3)', () => {
+  it('round-trips leads, and older backups restore with none', async () => {
+    const lead = {
+      id: 'c1',
+      name: 'Test Lead',
+      company: 'Example Co',
+      sourceUrl: 'https://example.com/team',
+      pastCompanies: ['Initech'],
+      schools: [],
+      knowsPersonally: false,
+      workedTogether: false,
+      status: 'new' as const,
+      note: '',
+      createdAt: '2026-11-02T00:00:00.000Z',
+      updatedAt: '2026-11-02T00:00:00.000Z',
+    }
+    const env = await createBackup(completeProfile(), PASS, { ...FAST, contacts: [lead] })
+    expect((await restoreFromText(JSON.stringify(env), PASS)).contacts).toEqual([lead])
+    const none = await createBackup(completeProfile(), PASS, FAST)
+    expect((await restoreFromText(JSON.stringify(none), PASS)).contacts).toEqual([])
+  })
+})

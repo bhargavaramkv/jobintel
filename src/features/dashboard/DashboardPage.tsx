@@ -18,11 +18,19 @@ import { applyFilters, DEFAULT_FILTERS, feedFreshness, NEW_WINDOW_DAYS, newJobs,
 import { calculateReadiness } from '../../domain/profile/readiness'
 import { JobCard } from '../jobs/JobCard'
 import { useJobActions } from '../jobs/useJobActions'
+import { useContacts } from '../referrals/useContacts'
+import { useOutreach } from '../outreach/outreachContext'
+import { followUpState } from '../../domain/outreach/drafts'
+import { threadOf } from '../../domain/outreach/messages'
+import { dueApplicationFollowUps } from '../../domain/applications/pipeline'
 import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
+import { localDate, STAGE_LABEL, stageOf } from '../../domain/jobs/actions'
+import { matchJob, matchRank } from '../../domain/match/score'
 import { useJobFeed } from '../jobs/jobFeed'
 import { useProfile } from '../profile/useProfile'
 import { greetingFor } from './greeting'
-import { ROADMAP } from './roadmap'
+import { NEXT_MILESTONE, ROADMAP } from './roadmap'
+import { RemindersPanel } from '../reminders/RemindersPanel'
 import './dashboard.css'
 
 interface Kpi {
@@ -32,11 +40,6 @@ interface Kpi {
   hint: string
 }
 
-/** Not-yet-built metrics stay at zero with their phase; no number is invented. */
-const PLANNED_KPIS: Kpi[] = [
-  { label: 'Referral Leads', value: 0, icon: Users, hint: 'Available in Phase 4' },
-  { label: 'Follow-ups', value: 0, icon: CalendarClock, hint: 'Available in Phase 5' },
-]
 
 export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   const now = useNow(nowOverride)
@@ -55,13 +58,39 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
   const matching = useMemo(() => {
     if (!feed) return []
     const pool = applyFilters(feed.jobs, DEFAULT_FILTERS, prefs, now).filter(
-      (j) => !actions.get(j.id)?.decision && !assessJob(j, learned).hidden,
+      (j) => !actions.get(j.id)?.decision && !stageOf(actions.get(j.id)) && !assessJob(j, learned).hidden,
     )
     const newest = sortJobs(pool, 'newest')
-    if (!ranked) return newest
+    const canMatch = !!profile && profile.primarySkills.length + profile.secondarySkills.length > 0
+    if (!ranked && !canMatch) return newest
     const score = new Map(newest.map((j) => [j.id, assessJob(j, learned, targets).score]))
-    return newest.sort((a, b) => score.get(b.id)! - score.get(a.id)!)
-  }, [feed, prefs, now, actions, learned, targets, ranked])
+    const fit = new Map(canMatch ? newest.map((j) => [j.id, matchRank(matchJob(j, profile, targets))]) : [])
+    return newest.sort((a, b) => (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) || score.get(b.id)! - score.get(a.id)!)
+  }, [feed, prefs, now, actions, learned, targets, ranked, profile])
+  const { contacts } = useContacts()
+  const { messages } = useOutreach()
+  // Recent activity from your own records: stage changes and logged messages.
+  const activity = useMemo(() => {
+    const events: Array<{ key: string; at: string; text: string }> = []
+    for (const a of actions.values())
+      (a.history ?? []).forEach((h, i) =>
+        events.push({ key: `${a.jobId}-${i}`, at: h.at, text: `${STAGE_LABEL[h.stage]}: ${a.snapshot.title} at ${a.snapshot.company}` }),
+      )
+    for (const m of messages.values())
+      if (m.status === 'sent' && m.sentOn)
+        events.push({ key: m.id, at: m.sentOn, text: `Message sent to ${contacts.get(m.contactId)?.name ?? 'a removed lead'}` })
+    return events.sort((x, y) => y.at.localeCompare(x.at)).slice(0, 8)
+  }, [actions, messages, contacts])
+  const followUpsDue = useMemo(() => {
+    const day = localDate(now)
+    return [...contacts.values()].filter((c) => {
+      if (c.status === 'dismissed') return false
+      const t = threadOf(messages.values(), c.id)
+      const f = followUpState(t.sent, t.replied)
+      return !!f.dueOn && f.dueOn <= day
+    }).length + dueApplicationFollowUps(actions.values(), day).length
+  }, [contacts, messages, actions, now])
+  const leadCount = useMemo(() => [...contacts.values()].filter((c) => c.status !== 'dismissed').length, [contacts])
   const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
   const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
   const freshness = feedFreshness(feed?.lastSuccessfulScanAt, now)
@@ -78,7 +107,18 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
       icon: Bookmark,
       hint: appliedCount ? 'Marked by you in this browser' : 'Mark jobs as applied to count them',
     },
-    ...PLANNED_KPIS,
+    {
+      label: 'Referral Leads',
+      value: leadCount,
+      icon: Users,
+      hint: leadCount ? 'Recorded by you, with sources' : 'Add leads in Referrals',
+    },
+    {
+      label: 'Follow-ups',
+      value: followUpsDue,
+      icon: CalendarClock,
+      hint: followUpsDue ? 'Due today or overdue' : 'None due',
+    },
   ]
 
   return (
@@ -165,6 +205,7 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
                   now={now}
                   isNew={fresh.some((f) => f.id === j.id)}
                   assessment={ranked ? assessJob(j, learned, targets) : undefined}
+                  match={profile ? matchJob(j, profile, targets) : undefined}
                 />
               ))}
               <Link to="/jobs" className="btn btn--secondary feed__all">
@@ -195,6 +236,7 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
         </section>
 
         <aside className="rail-col" aria-label="Setup and milestones">
+          <RemindersPanel now={now} />
           <section className="panel" aria-labelledby="setup-title">
             <div className="panel__header">
               <h2 id="setup-title" className="panel__title">
@@ -268,10 +310,16 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
               <Flag size={16} className="muted" aria-hidden="true" />
             </div>
             <div className="panel__body milestone">
-              <p>
-                <strong>Phase 3 · Matching engine.</strong> Rank discovered jobs against your profile in this browser, with
-                an explained score of matched and missing skills, plus shortlist and hide.
-              </p>
+              {NEXT_MILESTONE ? (
+                <p>
+                  <strong>
+                    Phase {NEXT_MILESTONE.phase} · {NEXT_MILESTONE.label}.
+                  </strong>{' '}
+                  {NEXT_MILESTONE.blurb}
+                </p>
+              ) : (
+                <p>All planned phases are available.</p>
+              )}
               <ol className="roadmap">
                 {ROADMAP.map((r) => (
                   <li key={r.phase} className={r.done ? 'is-done' : undefined}>
@@ -293,9 +341,17 @@ export function DashboardPage({ now: nowOverride }: { now?: Date }) {
           </h2>
           <Activity size={16} className="muted" aria-hidden="true" />
         </div>
-        <p className="panel__body secondary">
-          Activity will appear here once discovery and application tracking are enabled.
-        </p>
+        {activity.length === 0 ? (
+          <p className="panel__body secondary">Activity will appear here as you shortlist, apply and log outreach.</p>
+        ) : (
+          <ul className="panel__body activity__list">
+            {activity.map((e) => (
+              <li key={e.key}>
+                <span className="mono muted">{e.at.slice(0, 10)}</span> {e.text}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   )

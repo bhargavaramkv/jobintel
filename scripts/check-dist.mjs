@@ -49,7 +49,10 @@ for (const file of walk(DIST)) {
     console.error(`✖ Mis-encoded (mojibake) characters in ${file}`)
     failures++
   }
-  if (isData && /"(primarySkills|professionalSummary|displayName|noticePeriod|compensation)"/.test(text)) {
+  if (
+    isData &&
+    /"(primarySkills|professionalSummary|displayName|noticePeriod|compensation|pastEmployers|schools|knowsPersonally|workedTogether|rejectReasons|resumeVersion|repliedOn|contactIds)"/.test(text)
+  ) {
     console.error(`✖ Candidate profile field found in public data: ${file}`)
     failures++
   }
@@ -59,8 +62,15 @@ for (const file of walk(DIST)) {
   }
 }
 
+// The production page must carry the Content-Security-Policy meta tag.
+const indexHtml = readFileSync(join(DIST, 'index.html'), 'utf8')
+if (!/http-equiv="Content-Security-Policy"[^>]*default-src 'self'/.test(indexHtml)) {
+  console.error('✖ dist/index.html has no Content-Security-Policy meta tag')
+  failures++
+}
+
 if (failures) {
   console.error(`\n${failures} problem(s) found in dist/.`)
   process.exit(1)
 }
-console.log(`✓ dist/ check passed (${files} files scanned: no secrets, trackers or source maps).`)
+console.log(`✓ dist/ check passed (${files} files scanned: no secrets, trackers, source maps or private fields; CSP present).`)

@@ -2,7 +2,7 @@
 
 > **Document status:** Implementation brief for Claude Code  
 > **Product version:** v0.1  
-> **Current delivery scope:** Implement **Phase 1 only**. Phases 2+ are architecture and roadmap specifications; do not implement them in this delivery.  
+> **Current delivery scope:** All phases (1–9) are now implemented; see `TODO.md`. The Phase-1-only wording below is kept as the original brief.  
 > **Hosting constraint:** The application must be deployable to **GitHub Pages** without requiring a separately hosted backend.
 
 ---

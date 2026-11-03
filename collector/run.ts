@@ -5,11 +5,11 @@
  * Reads only public job-board APIs. Never reads, needs or writes candidate data.
  * Exits non-zero WITHOUT writing when every source fails, so the last good feed stays published.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import { ATS_KINDS, CITY_VALUES, feedSchema, type JobFeed } from '../src/domain/jobs/feedSchema.ts'
+import { ATS_KINDS, CITY_VALUES, feedSchema, SCAN_LOG_LENGTH, type JobFeed, type ScanSummary } from '../src/domain/jobs/feedSchema.ts'
 import { fetchSource, type SourceConfig } from './adapters.ts'
 import { makeTitleFilter } from './filter.ts'
 import { mergeFeed, type SourceResult } from './merge.ts'
@@ -106,12 +106,29 @@ export async function collect(
   return results
 }
 
+/** Summary of a completed scan, prepended to the feed's scan log. */
+export function summarizeScan(feed: JobFeed, results: SourceResult[], now: Date): ScanSummary {
+  const at = now.toISOString()
+  return {
+    at,
+    sourcesOk: results.filter((r) => r.ok).length,
+    sourcesFailed: results.filter((r) => !r.ok).length,
+    open: feed.jobs.filter((j) => j.status === 'open').length,
+    added: feed.jobs.filter((j) => j.firstSeenAt === at).length,
+    closed: feed.jobs.filter((j) => j.closedAt === at).length,
+  }
+}
+
+export function withScanLog(feed: JobFeed, previous: JobFeed | null, summary: ScanSummary): JobFeed {
+  return { ...feed, recentScans: [summary, ...(previous?.recentScans ?? [])].slice(0, SCAN_LOG_LENGTH) }
+}
+
 /** Compact JSON with one job per line, so git diffs between scans stay readable. */
 export function serializeFeed(feed: JobFeed): string {
-  const { jobs, sources, ...head } = feed
+  const { jobs, sources, recentScans, ...head } = feed
   const lines = (xs: unknown[]) => (xs.length ? '[\n' + xs.map((x) => JSON.stringify(x)).join(',\n') + '\n]' : '[]')
   const headJson = JSON.stringify(head).slice(0, -1)
-  return `${headJson},
+  return `${headJson},${recentScans ? `\n"recentScans":${lines(recentScans)},` : ''}
 "sources":${lines(sources)},
 "jobs":${lines(jobs)}}
 `
@@ -144,13 +161,17 @@ async function main() {
     process.exit(1)
   }
 
-  const feed = mergeFeed(readPrevious(out), results, {
-    now: new Date(),
+  const now = new Date()
+  const previous = readPrevious(out)
+  const merged = mergeFeed(previous, results, {
+    now,
     keepTitle: makeTitleFilter(config.titleFilter),
     maxDescriptionChars: config.maxDescriptionChars,
     closedRetentionDays: config.closedRetentionDays,
     cities: config.cities,
   })
+  const summary = summarizeScan(merged, results, now)
+  const feed = withScanLog(merged, previous, summary)
   feedSchema.parse(feed) // never publish an invalid feed
 
   mkdirSync(dirname(out), { recursive: true })
@@ -158,6 +179,25 @@ async function main() {
   const open = feed.jobs.filter((j) => j.status === 'open').length
   console.log(`Wrote ${feed.jobs.length} jobs (${open} open) from ${okCount}/${results.length} healthy sources to ${out}`)
   if (okCount < results.length) console.log(`::warning::${results.length - okCount} source(s) failed this scan`)
+  writeStepSummary(summary, results)
+}
+
+/** Markdown summary on the Actions run page (no-op locally). */
+function writeStepSummary(summary: ScanSummary, results: SourceResult[]) {
+  const file = process.env.GITHUB_STEP_SUMMARY
+  if (!file) return
+  const failed = results.filter((r) => !r.ok)
+  const md = [
+    '## Job discovery scan',
+    '',
+    `| Sources OK | Failed | Open jobs | New | Closed |`,
+    `|---|---|---|---|---|`,
+    `| ${summary.sourcesOk} | ${summary.sourcesFailed} | ${summary.open} | ${summary.added} | ${summary.closed} |`,
+    '',
+    ...(failed.length ? ['### Failed sources', '', ...failed.map((r) => `- ${r.source.company} (${r.source.ats}/${r.source.board}): ${r.error}`)] : []),
+    '',
+  ].join('\n')
+  appendFileSync(file, md)
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -28,6 +28,8 @@ export interface ProfileDraft {
   willingToRelocate: boolean
   companyTypes: CompanyType[]
   targetCompanies: string[]
+  pastEmployers: string[]
+  schools: string[]
   currency: (typeof CURRENCIES)[number]
   compensationMin: string
   compensationMax: string
@@ -53,6 +55,8 @@ export function draftFromProfile(p: CandidateProfile): ProfileDraft {
     willingToRelocate: p.willingToRelocate,
     companyTypes: [...p.companyTypes],
     targetCompanies: [...p.targetCompanies],
+    pastEmployers: [...(p.pastEmployers ?? [])],
+    schools: [...(p.schools ?? [])],
     currency: p.compensation?.currency ?? 'INR',
     compensationMin: p.compensation?.minimum === undefined ? '' : String(p.compensation.minimum),
     compensationMax: p.compensation?.maximum === undefined ? '' : String(p.compensation.maximum),
@@ -136,6 +140,8 @@ export function profileFromDraft(
     willingToRelocate: draft.willingToRelocate,
     companyTypes: draft.companyTypes,
     targetCompanies: draft.targetCompanies,
+    ...(draft.pastEmployers.length ? { pastEmployers: draft.pastEmployers } : {}),
+    ...(draft.schools.length ? { schools: draft.schools } : {}),
     compensation: hasComp
       ? { currency: draft.currency, minimum: min.value, maximum: max.value }
       : undefined,

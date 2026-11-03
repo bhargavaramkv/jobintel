@@ -1,5 +1,7 @@
 # Implementation status
 
+All planned phases (1–9) are implemented. See `docs/SECURITY.md` and `docs/RECOVERY.md`.
+
 ## Phase 1: app shell, dark UX, local profile ✅
 
 - [x] React + TypeScript + Vite static build, `base: /jobintel/`
@@ -60,10 +62,102 @@
 - [x] Dashboard: real **Applied** count, and the feed shows only undecided jobs, ranked
 - Decisions never leave the browser. The GitHub scan never sees them; the learning runs client-side on each new feed.
 
-## Phase 3: matching engine (not started; skill-based fit scoring still to do)
-## Phase 4: referral intelligence (not started)
-## Phase 5: outreach strategist (not started)
-## Phase 6: application management (partly done: applied date + notes; interview/offer stages, status history and follow-ups not started)
-## Phase 7: scheduled automation (scheduled scan done in Phase 2; reminders/notifications not started)
-## Phase 8: analytics (not started)
-## Phase 9: reliability & polish (not started)
+## Phase 3: matching engine ✅
+
+- [x] Deterministic fit score in the browser (`src/domain/match/score.ts`): skills 30, experience 20, role alignment 20, location/work 10, seniority 10, other 10
+- [x] Every factor shows its evidence (matched / missing). A factor with no data on either side is left out of the score, and the card shows the coverage
+- [x] Mandatory vs preferred skills: the collector now tags bullets under "preferred / nice to have / bonus" headings (`preferred` in the feed), and bullets saying "a plus" count as preferred
+- [x] Skill vocabulary with careful synonyms (`.NET` = ASP.NET Core = dotnet; JavaScript ≠ TypeScript; Java ≠ Kotlin); longer names shadow shorter ones (SQL Server ≠ SQL)
+- [x] Score capped at 50 when the profile lists under a third of the required skills
+- [x] "Best fit for your profile" sort (default once the profile has skills); dashboard feed ranked by fit too
+- [x] Stale ("posted long ago", 60+ days) and similar-posting (same company + title) flags
+- [x] Shortlist / un-shortlist on every job, with a Shortlisted tab. Hide = "Not interested"
+- [x] Tests: positive, negative and edge cases, determinism, missing data never counted as a match
+
+### Known limitations
+
+- Skill matching is by name. A posting that describes a skill without naming it isn't recognised.
+- Years of experience are read from text like "3+ years" or "3–5 yrs"; the largest lower bound wins, which can over-read numbers that aren't requirements.
+- Older feed entries have no `preferred` field until the next scan.
+## Phase 4: referral intelligence ✅
+
+- [x] Referrals page (`#/referrals`): "Companies to cover" from your pipeline (shortlisted / active applications) and target companies, with lead counts
+- [x] "Find people" opens public searches (LinkedIn people search, web search) in a new tab. JobIntel fetches and stores nothing from them
+- [x] Leads stored in IndexedDB (DB v3, `contacts` store); included in encrypted backups (data schema 3) and cleared by "Clear data"
+- [x] Every lead needs a source URL (http/https). There are no email or phone fields
+- [x] Relationships are derived from recorded facts, never typed in: former colleague (overlapping employers, normalised), alumni (overlapping colleges), mutual connection (named introducer + evidence), direct connection (you confirm), recruiter / engineering team (from role)
+- [x] Confidence labels: Verified (you confirmed) / Inferred (from overlapping facts) / Unknown. "Worked together" can be confirmed only when an employer overlaps
+- [x] Ranking by strength of shared context × confidence, plus pipeline / target-company relevance and matching role area; reasons shown
+- [x] Status per lead: new, I know them, I don't know them, contacted, dismissed
+- [x] Profile gains optional *Past employers* and *Colleges* (used only for this comparison)
+
+### Known limitations
+
+- Overlapping employers don't prove you overlapped in time or team; such leads stay "Inferred" until you confirm.
+- Leads are entered by hand. There is no import from LinkedIn or other networks, by design.
+## Phase 5: outreach strategist ✅
+
+- [x] Outreach page (`#/outreach`, also "Draft outreach" on each lead): context panel with relationships, evidence, approach and job fit
+- [x] Strategies chosen from the evidence: direct connection / confirmed colleague ask for a referral; shared employer, alumni, mutual connection and cold contacts ask for advice first; recruiters get a role-focused note
+- [x] Overrides limited to strategies the facts support (`allowedStrategies`), so a draft can never claim a relationship you didn't record
+- [x] LinkedIn connection note (300-char limit enforced with a warning), LinkedIn message and email (with subject); concise / warm / formal tones
+- [x] Drafts are editable; "Facts this draft uses" lists every fact; warnings when profile details are missing
+- [x] Copy to clipboard; nothing is ever sent. "I sent it" logs the message with a date, marks the lead contacted, and moves a shortlisted job to "Referral requested" when the draft asked for one
+- [x] Message history per person, "They replied", saved drafts
+- [x] Follow-up policy: at most 2 follow-ups, 7 days apart, none after a reply. Due follow-ups listed on the page and counted on the dashboard
+- [x] Stored in IndexedDB (DB v4, `outreach` store); in encrypted backups (data schema 4)
+
+### Known limitations
+
+- Drafts are templates, not AI-written text. Edit them so they sound like you.
+- Replies are logged by hand; JobIntel can't see your inbox.
+## Phase 6: application management ✅
+
+- [x] Applications page (`#/applications`) with a pipeline summary: Shortlisted → Referral requested → Referred → Applied → Interviewing → Offer / Rejected by company / Withdrawn
+- [x] Stage changes append to a status history (never rewritten); a timeline per application
+- [x] Per application: applied date, next action, follow-up date, resume version label, linked referral contacts, interviews (date, type, outcome, note), rejection/feedback notes
+- [x] "Needs attention": overdue follow-ups and upcoming interviews; counted in the dashboard Follow-ups KPI
+- [x] Manual applications for jobs outside the feed (`manual:` ids)
+- [x] Duplicate prevention: one record per job id, and an active application with the same company + title (case/brackets ignored) blocks a manual entry and asks before shortlisting/applying to a reposted job
+- [x] Applications live in the existing `jobActions` records (new optional fields), so they're in encrypted backups and old records still validate (legacy "applied" counts as the Applied stage)
+
+### Known limitations
+
+- Resume files aren't stored, only a version label.
+## Phase 7: scheduled automation & reminders ✅
+
+- [x] Scheduled scans three times a day plus manual dispatch (from Phase 2). A failed scan writes nothing, so the last good feed stays live
+- [x] Scan log: each successful scan prepends a summary (sources OK/failed, open, new, closed) to `recentScans` in the feed (last 20), shown under *Sources* on Job Discovery
+- [x] Run summary on the Actions page (`$GITHUB_STEP_SUMMARY`) listing failed sources
+- [x] Failure alerts: a failed scan or deploy opens (or comments on) one `scan-failure` issue, which notifies the owner; the next good run closes it
+- [x] In-app freshness plus "next scan around …" (from `src/domain/jobs/schedule.ts`; a test keeps it in sync with `scan.yml`)
+- [x] "Today" panel on the dashboard: interviews today, application and outreach follow-ups due
+- [x] Optional browser reminders while the app is open: one notification a day at most, only with permission, stored preference only (no record content in localStorage)
+
+### Known limitations
+
+- Reminders can't fire while the tab is closed; a static site has no background process or push server.
+- The cron stays in UTC (equivalent IST times are documented) rather than the newer `timezone:` key, so an
+  unsupported key can never silently stop the scans.
+## Phase 8: analytics ✅
+
+- [x] Analytics page (`#/analytics`), computed in the browser from your records only; no benchmarks
+- [x] Funnel from status history: open jobs → shortlisted/applied → applied → company responded → interviewed → offer, with step conversion
+- [x] Referrals & outreach: messages sent, people contacted, replies, recruiter replies, referral requests, confirmed referrals, reply rate
+- [x] By-company table (applied, responded, interviews, offers, rejections, response rate with n)
+- [x] Time to response (median days from applied to first company response) and applications still waiting
+- [x] Repeated skill gaps across relevant jobs (pipeline + open jobs with at least a partial fit)
+- [x] Recommendations, each with its evidence and records; group comparisons are labelled "Correlation", not cause; small-sample warnings below 5 applications
+- [x] Every number expands to the records behind it; CSV export only on request
+- [x] Mobile bottom navigation fits all seven areas
+## Phase 9: reliability, security & polish ✅
+
+- [x] Security & privacy review: `docs/SECURITY.md`
+- [x] Content-Security-Policy meta tag on the production build; `check:dist` requires it and E2E fails on CSP violations
+- [x] `check:dist` also rejects any private field name (leads, applications, outreach, new profile fields) in public data
+- [x] Dependency audit: `npm audit` clean
+- [x] Accessibility: axe-core (WCAG 2 A/AA) on every screen at desktop, tablet and mobile widths in E2E; fixed in-text links that relied on colour alone
+- [x] Full-workflow E2E: shortlist → referral lead → outreach → application → analytics → encrypted backup → clear → restore
+- [x] Performance: screens other than the dashboard load on first visit (route-level code splitting); no chunk-size warning
+- [x] Workflow failure alerts (Phase 7) and recovery instructions: `docs/RECOVERY.md`, including supported browsers
+- [x] Mobile navigation fits all seven areas

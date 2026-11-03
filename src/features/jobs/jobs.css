@@ -438,3 +438,114 @@
 .job__error {
   grid-column: 1 / -1;
 }
+
+/* Fit score (Phase 3) */
+.match-pill--strong {
+  border-color: rgba(53, 211, 154, 0.35);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.match-pill--good {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.match-pill--partial {
+  color: var(--text-primary);
+}
+
+.match-pill--weak,
+.match-pill--unknown {
+  color: var(--text-muted);
+}
+
+.match {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.match__head {
+  font-size: var(--text-sm);
+}
+
+.match__factors {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.match__factors li {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) 120px 56px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.match__factors li.is-unknown {
+  color: var(--text-muted);
+}
+
+.match__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.match__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.match__val {
+  text-align: right;
+  font-size: var(--text-xs);
+}
+
+.match__summary {
+  color: var(--text-secondary);
+}
+
+.match__ok {
+  color: var(--success);
+}
+
+.match__miss {
+  color: var(--warning);
+}
+
+.match__note {
+  color: var(--warning);
+}
+
+.job__similar {
+  font-size: var(--text-xs);
+}
+
+.job__pref {
+  margin-left: var(--space-2);
+}
+
+@media (max-width: 760px) {
+  .match__factors li {
+    grid-template-columns: 1fr 64px;
+  }
+
+  .match__bar {
+    display: none;
+  }
+
+  .match__summary {
+    grid-column: 1 / -1;
+  }
+}

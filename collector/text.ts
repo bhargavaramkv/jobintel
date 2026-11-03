@@ -60,41 +60,64 @@ const REQUIREMENT_HEADING =
 
 const BULLET = /^(•|-|\*|–|\d+[.)])\s+/
 
+const PREFERRED_HEADING = /\b(preferred|nice[- ]to[- ]haves?|bonus|good[- ]to[- ]haves?|pluses|desired|desirable|additional(ly)?)\b/i
+
 /**
  * Collect bullet lines that follow a requirements-style heading.
  * Purely textual: nothing is inferred beyond what the posting says.
+ * `preferred` holds the subset listed under a "preferred / nice to have / bonus" heading.
  */
-export function extractRequirements(text: string, max = 15): string[] {
-  const out: string[] = []
+export function extractRequirementSections(text: string, max = 15): { all: string[]; preferred: string[] } {
+  const all: string[] = []
+  const preferred: string[] = []
   let inSection = false
+  let isPreferred = false
   for (const raw of text.split('\n')) {
     const line = raw.trim()
     if (!line) continue
     const isBullet = BULLET.test(line)
     if (!isBullet) {
       // A short non-bullet line is treated as a heading.
-      if (line.length <= 80) inSection = REQUIREMENT_HEADING.test(line)
+      if (line.length <= 80) {
+        inSection = REQUIREMENT_HEADING.test(line)
+        isPreferred = inSection && PREFERRED_HEADING.test(line)
+      }
       continue
     }
     if (inSection) {
       const item = line.replace(BULLET, '').trim()
-      if (item.length >= 2 && item.length <= 400) out.push(item)
-      if (out.length >= max) break
+      if (item.length >= 2 && item.length <= 400) {
+        all.push(item)
+        if (isPreferred) preferred.push(item)
+      }
+      if (all.length >= max) break
     }
   }
-  return out
+  return { all, preferred }
+}
+
+export function extractRequirements(text: string, max = 15): string[] {
+  return extractRequirementSections(text, max).all
 }
 
 /** Lever provides structured lists with headings; prefer those. */
-export function requirementsFromLists(lists: Array<{ text?: string; content?: string }>, max = 15): string[] {
-  const out: string[] = []
+export function requirementSectionsFromLists(
+  lists: Array<{ text?: string; content?: string }>,
+  max = 15,
+): { all: string[]; preferred: string[] } {
+  const all: string[] = []
+  const preferred: string[] = []
   for (const list of lists) {
     if (!list.text || !REQUIREMENT_HEADING.test(list.text)) continue
+    const isPreferred = PREFERRED_HEADING.test(list.text)
     for (const line of htmlToText(list.content ?? '').split('\n')) {
       const item = line.replace(BULLET, '').trim()
-      if (item.length >= 2 && item.length <= 400) out.push(item)
-      if (out.length >= max) return out
+      if (item.length >= 2 && item.length <= 400) {
+        all.push(item)
+        if (isPreferred) preferred.push(item)
+      }
+      if (all.length >= max) return { all, preferred }
     }
   }
-  return out
+  return { all, preferred }
 }

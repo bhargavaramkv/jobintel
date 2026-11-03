@@ -1,4 +1,4 @@
-# JobIntel architecture (v0.1 / Phases 1–2)
+# JobIntel architecture (v0.9 / Phases 1–9)
 
 ## Decisions
 
@@ -112,6 +112,73 @@ Browser: fetch BASE_URL/data/jobs.json (same origin, plain GET) → Zod validate
 - Learning happens at read time in the browser, so each new public feed is ranked with the latest
   decisions without ever publishing them.
 
-## Future phases (not implemented)
+## Matching (Phase 3)
 
-Phase 3 will rank feed jobs against the local profile in the browser, with explained scores. See `IMPLEMENTATION_PLAN.md` §2.3 and §7.
+- `src/domain/match/skills.ts`: a fixed vocabulary of ~100 skills with aliases. Aliases only join spellings of the
+  same thing. Longer aliases of other skills are blanked before a shorter one is tested ("SQL Server" never counts
+  as "SQL"). Profile skills outside the vocabulary are matched literally.
+- `src/domain/match/score.ts`: `matchJob(job, profile, targets)` returns six weighted factors, each with a value
+  in 0..1 or `null` (no evidence). The score is the weighted mean of the known factors, and `coverage` is the
+  share of weight that had evidence. Bands need at least 50% coverage. When fewer than a third of 3+ required
+  skills are listed in the profile, the score is capped at 50.
+- Mandatory vs preferred: the collector writes `preferred` (bullets under preferred-style headings); bullets that
+  say "a plus" / "nice to have" also count as preferred.
+- Runs on every render of the feed in the browser; nothing about the profile leaves it.
+
+## Referral leads (Phase 4)
+
+- IndexedDB **v3** adds the `contacts` store (keyPath `id`). `src/storage/recordStore.ts` is a small typed,
+  validating repository used for it (and later stores).
+- `src/domain/referrals/contacts.ts`: the schema holds only facts (`pastCompanies`, `schools`, `mutual`,
+  `knowsPersonally`, `workedTogether`, `sourceUrl`). `relationshipsOf()` derives each relationship with a
+  confidence and evidence string. There is no field where a relationship can be asserted directly, so the UI
+  cannot show an unsupported claim.
+- Backups: data schema 3 adds `contacts` (older backups restore with none).
+
+## Outreach (Phase 5)
+
+- IndexedDB **v4** adds the `outreach` store: drafts and the user's log of sent messages (`status`, `sentOn`,
+  `repliedOn`). Nothing is ever sent by the app.
+- `src/domain/outreach/drafts.ts`: `strategyFor(rels)` picks the approach from derived relationships;
+  `allowedStrategies(rels)` bounds user overrides; `generateDraft()` fills deterministic templates only with the
+  lead, evidence, job snapshot and profile, returning the facts used and warnings. `followUpState()` implements
+  the follow-up limit (2, a week apart, none after a reply).
+- `src/features/shared/recordContext.tsx` is a generic provider/hook over a `recordStore`, used by contacts and
+  outreach.
+
+## Applications (Phase 6)
+
+- No new store: `jobActions` records gained optional `stage`, `history`, `interviews`, `nextAction`,
+  `followUpOn`, `resumeVersion`, `contactIds` and `feedback`. `withStage()` appends a history event and keeps
+  `decision`/`appliedOn` consistent (submitted stages mark the job applied). `stageOf()` treats legacy applied
+  records as Applied.
+- `src/domain/applications/pipeline.ts`: grouping, due follow-ups, upcoming interviews and `findDuplicate()`
+  (normalised company + title among active applications).
+- Manual applications use `manual:<uuid>` ids and a snapshot with `ats: 'manual'`.
+
+## Automation & reminders (Phase 7)
+
+- `collector/run.ts` adds `recentScans` (newest first, max 20) to the feed and writes a Markdown step summary.
+- `scan.yml` has an `alert` job (`if: always()`, `issues: write`) that opens/comments on a single
+  `scan-failure` issue when the scan or deploy fails and closes it after a good run. It uses the runner's `gh`
+  CLI with `GITHUB_TOKEN`; no secrets are added.
+- `src/domain/jobs/schedule.ts` mirrors the cron for the UI. `collector/schedule.test.ts` fails if they drift.
+- `src/domain/reminders/reminders.ts` summarises due items from local records. `ReminderAgent` (mounted in the
+  shell) checks every 15 minutes while the app is open and shows at most one Notification per day when the
+  user turned reminders on and granted permission. localStorage holds only `remindersEnabled` and the last
+  notified date.
+
+## Analytics (Phase 8)
+
+- `src/domain/analytics/analytics.ts` is pure: `funnel`, `outreachStats`, `byCompany`, `responseTimes`,
+  `skillGaps`, `recommendations` and `applicationsCsv`. Each metric returns the ids of its records.
+- "Reached a stage" uses the status history plus the current stage, so later changes never erase earlier
+  progress. Legacy applied records without history count as Applied.
+- Charts are plain HTML/CSS (single-series bars in the accent colour with direct value labels); no chart library.
+
+## Reliability & polish (Phase 9)
+
+- Routes other than the dashboard use React Router `lazy`, so each screen is its own chunk.
+- `vite.config.ts` injects a CSP `<meta>` at build time only (the dev server needs inline scripts).
+- `e2e/workflow.spec.ts` runs axe-core on every screen and a full cross-feature flow including backup restore.
+- Reviews and runbooks: `docs/SECURITY.md`, `docs/RECOVERY.md`.

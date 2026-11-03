@@ -1,5 +1,5 @@
 import type { AtsKind } from '../src/domain/jobs/feedSchema.ts'
-import { extractRequirements, htmlToText, requirementsFromLists } from './text.ts'
+import { extractRequirementSections, htmlToText, requirementSectionsFromLists } from './text.ts'
 
 /** A posting as read from an ATS, before location/title filtering and merging. */
 export interface RawJob {
@@ -12,6 +12,8 @@ export interface RawJob {
   employmentType?: string
   descriptionText: string
   requirements: string[]
+  /** Subset of `requirements` listed under a preferred / nice-to-have heading. */
+  preferred?: string[]
   url: string
   postedAt?: string
 }
@@ -29,6 +31,11 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
 const uniq = (xs: Array<string | undefined>) => [...new Set(xs.filter((x): x is string => !!x))]
+
+const sections = (s: { all: string[]; preferred: string[] }) => ({
+  requirements: s.all,
+  ...(s.preferred.length ? { preferred: s.preferred } : {}),
+})
 
 function toIso(v: unknown): string | undefined {
   if (typeof v === 'number' && Number.isFinite(v)) return new Date(v).toISOString()
@@ -69,7 +76,7 @@ export function parseGreenhouse(data: unknown): RawJob[] {
         locations: uniq([str(obj(o.location).name), ...offices]),
         department: str(obj(arr(o.departments)[0]).name),
         descriptionText: text,
-        requirements: extractRequirements(text),
+        ...sections(extractRequirementSections(text)),
         url,
         postedAt: toIso(o.first_published) ?? toIso(o.updated_at),
       },
@@ -90,7 +97,7 @@ export function parseLever(data: unknown): RawJob[] {
     const text = [str(o.descriptionPlain), ...lists.map((l) => `${l.text ?? ''}\n${htmlToText(l.content ?? '')}`), str(o.additionalPlain)]
       .filter(Boolean)
       .join('\n\n')
-    const fromLists = requirementsFromLists(lists)
+    const fromLists = requirementSectionsFromLists(lists)
     return [
       {
         sourceId: id,
@@ -100,7 +107,7 @@ export function parseLever(data: unknown): RawJob[] {
         department: str(cat.team) ?? str(cat.department),
         employmentType: str(cat.commitment),
         descriptionText: text,
-        requirements: fromLists.length ? fromLists : extractRequirements(text),
+        ...sections(fromLists.all.length ? fromLists : extractRequirementSections(text)),
         url,
         postedAt: toIso(o.createdAt),
       },
@@ -130,7 +137,7 @@ export function parseAshby(data: unknown): RawJob[] {
         department: str(o.department),
         employmentType: str(o.employmentType),
         descriptionText: text,
-        requirements: extractRequirements(htmlText),
+        ...sections(extractRequirementSections(htmlText)),
         url,
         postedAt: toIso(o.publishedAt),
       },

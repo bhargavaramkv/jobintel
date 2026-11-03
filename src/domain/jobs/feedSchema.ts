@@ -36,6 +36,8 @@ export const jobSchema = z.object({
   description: z.string(),
   /** Bullet points found under requirement/qualification headings. */
   requirements: z.array(z.string()),
+  /** Subset of `requirements` the posting lists as preferred / nice to have. Absent in older feeds. */
+  preferred: z.array(z.string()).optional(),
   /** Original posting URL on the company/ATS site. */
   url: z.string().url(),
   /** When the source says the job was published, if it says. */
@@ -68,6 +70,22 @@ export const sourceHealthSchema = z.object({
 
 export type SourceHealth = z.infer<typeof sourceHealthSchema>
 
+/** One successful scan, newest first in `recentScans`. Public facts about the collector only. */
+export const scanSummarySchema = z.object({
+  at: z.string(),
+  sourcesOk: z.number().int().nonnegative(),
+  sourcesFailed: z.number().int().nonnegative(),
+  open: z.number().int().nonnegative(),
+  /** Jobs first seen in this scan. */
+  added: z.number().int().nonnegative(),
+  /** Jobs marked closed in this scan. */
+  closed: z.number().int().nonnegative(),
+})
+
+export type ScanSummary = z.infer<typeof scanSummarySchema>
+
+export const SCAN_LOG_LENGTH = 20
+
 export const feedSchema = z.object({
   formatVersion: z.literal(FEED_FORMAT_VERSION),
   generatedAt: z.string(),
@@ -77,6 +95,8 @@ export const feedSchema = z.object({
   cityScope: z.array(z.enum(CITY_VALUES)).optional(),
   jobs: z.array(jobSchema),
   sources: z.array(sourceHealthSchema),
+  /** Recent successful scans, newest first (absent in older feeds). */
+  recentScans: z.array(scanSummarySchema).max(SCAN_LOG_LENGTH).optional(),
 })
 
 export type JobFeed = z.infer<typeof feedSchema>

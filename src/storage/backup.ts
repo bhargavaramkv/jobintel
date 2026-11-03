@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { jobActionSchema, type JobAction } from '../domain/jobs/actions'
+import { contactSchema, type Contact } from '../domain/referrals/contacts'
+import { outreachMessageSchema, type OutreachMessage } from '../domain/outreach/messages'
 import { candidateProfileSchema, type CandidateProfile } from '../domain/profile/schema'
 import { SCHEMA_VERSION } from './constants'
 
@@ -51,6 +53,10 @@ const payloadSchema = z
     profile: candidateProfileSchema.nullable(),
     /** Added in data schema 2. Older backups have none. */
     jobActions: z.array(jobActionSchema).default([]),
+    /** Added in data schema 3 (referral leads). */
+    contacts: z.array(contactSchema).default([]),
+    /** Added in data schema 4 (outreach history). */
+    messages: z.array(outreachMessageSchema).default([]),
   })
   .strict()
 
@@ -124,7 +130,7 @@ export function checkPassphrase(passphrase: string): string | null {
 export async function createBackup(
   profile: CandidateProfile | null,
   passphrase: string,
-  options: { iterations?: number; now?: Date; jobActions?: JobAction[] } = {},
+  options: { iterations?: number; now?: Date; jobActions?: JobAction[]; contacts?: Contact[]; messages?: OutreachMessage[] } = {},
 ): Promise<BackupEnvelope> {
   const weak = checkPassphrase(passphrase)
   if (weak) throw new BackupError('weak-passphrase', weak)
@@ -134,7 +140,14 @@ export async function createBackup(
   const salt = c.getRandomValues(new Uint8Array(SALT_BYTES))
   const iv = c.getRandomValues(new Uint8Array(IV_BYTES))
   const key = await deriveKey(passphrase, salt, iterations)
-  const payload: BackupPayload = { schemaVersion: SCHEMA_VERSION, exportedAt: now, profile, jobActions: options.jobActions ?? [] }
+  const payload: BackupPayload = {
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: now,
+    profile,
+    jobActions: options.jobActions ?? [],
+    contacts: options.contacts ?? [],
+    messages: options.messages ?? [],
+  }
   const ciphertext = new Uint8Array(
     await c.subtle.encrypt(
       { name: 'AES-GCM', iv },

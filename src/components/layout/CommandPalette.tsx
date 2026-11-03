@@ -123,7 +123,7 @@ function PaletteDialog({ onClose }: { onClose: () => void }) {
             )
           })}
         </ul>
-        <div className="palette__footer mono muted">Navigation only in v0.1 · ↑↓ to move · Enter to open</div>
+        <div className="palette__footer mono muted">↑↓ to move · Enter to open</div>
       </div>
     </div>
   )
