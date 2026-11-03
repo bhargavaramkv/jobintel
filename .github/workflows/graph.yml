@@ -1,0 +1,55 @@
+name: Refresh code graph
+
+# Keeps graphify-out/ (the knowledge graph agents read instead of the whole repo) in step with the code.
+# AST-only: no LLM, no API key. Docs/markdown/image changes need a manual `/graphify . --update`
+# (semantic nodes already in graph.json are preserved by this job).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'collector/**'
+      - 'scripts/**'
+      - 'e2e/**'
+      - '.github/workflows/**'
+      - '*.ts'
+      - '*.json'
+      - 'index.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: graph-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install graphify
+        run: pip install "graphifyy==0.9.101"
+      - name: Rebuild code graph
+        run: graphify update .
+      - name: Commit graph if changed
+        run: |
+          git add graphify-out/graph.json graphify-out/GRAPH_REPORT.md graphify-out/manifest.json \
+            graphify-out/.graphify_labels.json graphify-out/.graphify_labels.json.sig
+          if git diff --cached --quiet; then
+            echo "Graph unchanged."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore(graph): refresh code graph [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
