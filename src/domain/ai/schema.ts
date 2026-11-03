@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { REJECT_REASONS, type RejectReason } from '../jobs/actions.ts'
+import { CITY_VALUES } from '../jobs/feedSchema.ts'
 
 /**
  * AI recommendation contract (versioned).
@@ -60,7 +61,7 @@ const REASON_IDS = REJECT_REASONS.map((r) => r.id) as [RejectReason, ...RejectRe
  * on a job record and is re-checked against the live record when the user accepts it.
  * Deliberately absent: submitting applications, sending messages, editing the profile, deleting.
  */
-export const ACTION_TYPES = ['none', 'shortlist', 'not-interested', 'add-note', 'set-follow-up', 'set-stage', 'add-lead'] as const
+export const ACTION_TYPES = ['none', 'shortlist', 'not-interested', 'add-note', 'set-follow-up', 'set-stage', 'add-lead', 'track-job'] as const
 export type ActionType = (typeof ACTION_TYPES)[number]
 
 /** Stages an AI may propose (from evidence such as an email). Only forward moves are ever applied. */
@@ -108,6 +109,20 @@ export const proposedActionSchema = z.discriminatedUnion('type', [
       reason: text(300),
     })
     .strict(),
+  // A role found outside the tracked job boards (LinkedIn, Naukri, a careers page). Accepting it adds
+  // it to the pipeline as a shortlisted manual entry.
+  z
+    .object({
+      type: z.literal('track-job'),
+      title: text(120),
+      company: text(120),
+      url: httpUrl,
+      location: text(120),
+      city: z.enum(CITY_VALUES).optional(),
+      /** Where it was found, e.g. "LinkedIn" or "Company careers page". */
+      source: text(80),
+    })
+    .strict(),
 ])
 export type ProposedAction = z.infer<typeof proposedActionSchema>
 
@@ -152,7 +167,9 @@ type Checkable = {
 
 /** Cross-field rules shared by the incoming and the stored form of a recommendation. */
 export function refineRecommendation(r: Checkable, ctx: z.RefinementCtx): void {
-  if ((r.kind === 'job-fit' || JOB_ACTIONS.includes(r.action.type)) && !r.jobId) {
+  // A job-fit for a role outside the feed (track-job) carries its own posting link instead of a jobId.
+  const needsJob = (r.kind === 'job-fit' && r.action.type !== 'track-job') || JOB_ACTIONS.includes(r.action.type)
+  if (needsJob && !r.jobId) {
     ctx.addIssue({ code: 'custom', path: ['jobId'], message: 'A job-fit recommendation or a proposed change to a job needs a jobId' })
   }
   // Grounding: a claim that rests only on outside knowledge cannot be highly confident.

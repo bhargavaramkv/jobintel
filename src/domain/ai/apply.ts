@@ -13,6 +13,7 @@ import {
   type JobRef,
 } from '../jobs/actions'
 import type { Job } from '../jobs/feedSchema'
+import { findDuplicate, manualRef } from '../applications/pipeline'
 import { contactSchema, type Contact } from '../referrals/contacts'
 import type { StoredRecommendation } from './schema'
 
@@ -54,6 +55,21 @@ function refFor(jobId: string, ctx: ApplyContext): { ref: JobRef; job?: Job } | 
 export function planApply(rec: StoredRecommendation, ctx: ApplyContext): ApplyPlan {
   const { action } = rec
   if (action.type === 'none') return { ok: true, summary: 'Acknowledged. No records were changed.', next: null }
+
+  if (action.type === 'track-job') {
+    const url = normUrl(action.url)
+    const known = [...ctx.actions.values()].find((a) => normUrl(a.snapshot.url) === url)
+    if (known) return refuse(`Already tracked: ${known.snapshot.title} at ${known.snapshot.company}.`)
+    const dup = findDuplicate(ctx.actions.values(), { company: action.company, title: action.title })
+    if (dup) return refuse(`You already have ${dup.snapshot.title} at ${dup.snapshot.company} in your pipeline.`)
+    const base = manualRef({ title: action.title, company: action.company, url: action.url }, `manual:${(ctx.newId ?? (() => ctx.now.getTime().toString(36)))()}`)
+    const ref = { ...base, snapshot: { ...base.snapshot, locations: [action.location], cities: action.city ? [action.city] : [] } }
+    return {
+      ok: true,
+      summary: `Added ${action.title} at ${action.company} (${action.source}) to your pipeline as Shortlisted.`,
+      next: withStage(ref, undefined, 'shortlisted', ctx.now, `Found by AI on ${action.source}`.slice(0, 300)),
+    }
+  }
 
   if (action.type === 'add-lead') {
     const existing = [...(ctx.contacts?.values() ?? [])]

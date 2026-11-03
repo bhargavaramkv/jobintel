@@ -282,3 +282,15 @@ describe('schema v2 additions (A2–A8)', () => {
     }
   })
 })
+
+describe('track-job contract', () => {
+  const ext = { type: 'track-job', title: 'Backend Engineer', company: 'Example', url: 'https://example.com/j/1', location: 'Hyderabad', source: 'Naukri' }
+  const one = (action: Record<string, unknown>) => ok(json(rawResult({ schemaVersion: 2 }, [rawRecommendation({ kind: 'job-fit', jobId: undefined, action })])))
+
+  it('needs no jobId but a real http(s) posting link, a location and a source', () => {
+    expect(one(ext).recommendations).toHaveLength(1)
+    expect(one({ ...ext, url: 'javascript:alert(1)' }).recommendations).toHaveLength(0)
+    expect(one({ ...ext, source: undefined }).recommendations).toHaveLength(0)
+    expect(one({ ...ext, city: 'Paris' }).recommendations).toHaveLength(0)
+  })
+})

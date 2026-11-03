@@ -35,6 +35,8 @@ export function describeAction(action: ProposedAction): string {
       return `Set a follow-up on ${action.followUpOn}${action.nextAction ? ` and next action “${action.nextAction}”` : ''}.`
     case 'set-stage':
       return `Move this application to “${STAGE_LABEL[action.stage]}”${action.note ? ` (${action.note})` : ''}.`
+    case 'track-job':
+      return `Track ${action.title} at ${action.company} (${action.location}, found on ${action.source}) as a shortlisted job.`
     case 'add-lead':
       return `Add ${action.name}${action.role ? `, ${action.role}` : ''} at ${action.company} as a referral lead (found at ${action.sourceUrl}). ${action.reason}`
   }
