@@ -2,9 +2,11 @@ import { z } from 'zod'
 import { jobActionSchema, type JobAction } from '../domain/jobs/actions'
 import { contactSchema, type Contact } from '../domain/referrals/contacts'
 import {
+  automationSettingsSchema,
   exportRecordSchema,
   storedBriefingSchema,
   storedRecommendationSchema,
+  type AutomationSettings,
   type ExportRecord,
   type StoredBriefing,
   type StoredRecommendation,
@@ -69,6 +71,8 @@ const payloadSchema = z
     aiRecommendations: z.array(storedRecommendationSchema).default([]),
     aiBriefings: z.array(storedBriefingSchema).default([]),
     aiExports: z.array(exportRecordSchema).default([]),
+    /** Added in data schema 6. The access token is always stripped before export. */
+    aiSettings: z.array(automationSettingsSchema).default([]),
   })
   .strict()
 
@@ -151,6 +155,7 @@ export async function createBackup(
     aiRecommendations?: StoredRecommendation[]
     aiBriefings?: StoredBriefing[]
     aiExports?: ExportRecord[]
+    aiSettings?: AutomationSettings[]
   } = {},
 ): Promise<BackupEnvelope> {
   const weak = checkPassphrase(passphrase)
@@ -171,6 +176,8 @@ export async function createBackup(
     aiRecommendations: options.aiRecommendations ?? [],
     aiBriefings: options.aiBriefings ?? [],
     aiExports: options.aiExports ?? [],
+    // Never back up the access token.
+    aiSettings: (options.aiSettings ?? []).map(({ token: _t, ...rest }) => (void _t, rest)),
   }
   const ciphertext = new Uint8Array(
     await c.subtle.encrypt(

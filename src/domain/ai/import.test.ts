@@ -31,8 +31,10 @@ describe('AI result schema (version 1)', () => {
   })
 
   it('is versioned', () => {
-    expect(AI_SCHEMA_VERSION).toBe(1)
-    expect(err(json(rawResult({ schemaVersion: 2 })))).toMatch(/schema version 2.*understands version 1/)
+    expect(AI_SCHEMA_VERSION).toBe(2)
+    expect(ok(json(rawResult({ schemaVersion: 1 }))).recommendations).toHaveLength(1) // v1 is still accepted
+    expect(ok(json(rawResult({ schemaVersion: 2 }))).recommendations).toHaveLength(1)
+    expect(err(json(rawResult({ schemaVersion: 3 })))).toMatch(/schema version 3.*understands version 2/)
     expect(err(json(rawResult({ schemaVersion: 0 })))).toMatch(/schemaVersion/)
     expect(err(json(rawResult({ schemaVersion: '1' })))).toMatch(/schemaVersion/)
   })
@@ -248,5 +250,35 @@ describe('reviewing an import against local data', () => {
     expect(storedRecommendationSchema.safeParse(recommendations[0]).success).toBe(true)
     expect(storedBriefingSchema.safeParse(briefing).success).toBe(true)
     expect(briefing).toMatchObject({ id: CONTEXT_ID, date: '2026-11-03' })
+  })
+})
+
+describe('schema v2 additions (A2–A8)', () => {
+  const lead = { type: 'add-lead', name: 'Jane Doe', company: 'Acme', role: 'Engineering Manager', sourceUrl: 'https://example.com/team', reason: 'Leads the hiring team' }
+  const ok2 = (rec: Record<string, unknown>) => ok(json(rawResult({ schemaVersion: 2 }, [rawRecommendation(rec)])))
+
+  it('accepts a lead proposal without a jobId', () => {
+    const r = ok2({ kind: 'lead-proposal', jobId: undefined, action: lead })
+    expect(r.recommendations[0].action).toMatchObject({ type: 'add-lead', name: 'Jane Doe' })
+  })
+
+  it('requires a public http(s) source for every proposed lead', () => {
+    for (const bad of [{ ...lead, sourceUrl: undefined }, { ...lead, sourceUrl: 'javascript:alert(1)' }, { ...lead, sourceUrl: 'not a url' }, { ...lead, profileUrl: 'ftp://x.example' }]) {
+      expect(ok2({ kind: 'lead-proposal', jobId: undefined, action: bad }).recommendations, JSON.stringify(bad)).toHaveLength(0)
+    }
+  })
+
+  it('accepts set-stage only for the four forward stages, and only with a job', () => {
+    expect(ok2({ kind: 'application-update', action: { type: 'set-stage', stage: 'interview', note: 'Invite email 2026-11-02' } }).recommendations).toHaveLength(1)
+    for (const stage of ['withdrawn', 'shortlisted', 'referred', 'hired']) {
+      expect(ok2({ kind: 'application-update', action: { type: 'set-stage', stage } }).recommendations, stage).toHaveLength(0)
+    }
+    expect(ok2({ kind: 'application-update', jobId: undefined, action: { type: 'set-stage', stage: 'interview' } }).recommendations).toHaveLength(0)
+  })
+
+  it('accepts the new kinds', () => {
+    for (const kind of ['resume-suggestion', 'prep-plan']) {
+      expect(ok2({ kind, jobId: undefined, action: { type: 'none' } }).recommendations, kind).toHaveLength(1)
+    }
   })
 })

@@ -11,7 +11,12 @@ import { REJECT_REASONS, type RejectReason } from '../jobs/actions.ts'
  * To change the contract: add a new schema version, keep parsing the old one, and never loosen
  * a limit silently.
  */
-export const AI_SCHEMA_VERSION = 1
+/**
+ * v2 (AI phases A2–A8) is a strict superset of v1: new kinds (resume, lead, prep, application update)
+ * and two new actions (`add-lead`, `set-stage`). Every v1 result is still a valid v2 result.
+ */
+export const AI_SCHEMA_VERSION = 2
+export const SUPPORTED_SCHEMA_VERSIONS = [1, 2] as const
 export const AI_RESULT_FORMAT = 'jobintel-ai-result' as const
 export const AI_CONTEXT_FORMAT = 'jobintel-ai-context' as const
 
@@ -55,8 +60,23 @@ const REASON_IDS = REJECT_REASONS.map((r) => r.id) as [RejectReason, ...RejectRe
  * on a job record and is re-checked against the live record when the user accepts it.
  * Deliberately absent: submitting applications, sending messages, editing the profile, deleting.
  */
-export const ACTION_TYPES = ['none', 'shortlist', 'not-interested', 'add-note', 'set-follow-up'] as const
+export const ACTION_TYPES = ['none', 'shortlist', 'not-interested', 'add-note', 'set-follow-up', 'set-stage', 'add-lead'] as const
 export type ActionType = (typeof ACTION_TYPES)[number]
+
+/** Stages an AI may propose (from evidence such as an email). Only forward moves are ever applied. */
+export const AI_STAGES = ['applied', 'interview', 'offer', 'rejected'] as const
+
+const httpUrl = z
+  .string()
+  .trim()
+  .url()
+  .max(500)
+  .refine((u) => /^https?:\/\//i.test(u), 'Use an http(s) link')
+
+/** Actions that touch a job record and therefore need `jobId`. `add-lead` is about a company, not a job. */
+export const JOB_ACTIONS: readonly ActionType[] = ['shortlist', 'not-interested', 'add-note', 'set-follow-up', 'set-stage']
+/** Safe enough to apply without a click when the user turned on auto-accept: append-only, reversible. */
+export const LOW_RISK_ACTIONS: readonly ActionType[] = ['add-note', 'set-follow-up']
 
 export const proposedActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('none') }).strict(),
@@ -75,6 +95,19 @@ export const proposedActionSchema = z.discriminatedUnion('type', [
       nextAction: text(300).optional(),
     })
     .strict(),
+  z.object({ type: z.literal('set-stage'), stage: z.enum(AI_STAGES), note: text(300).optional() }).strict(),
+  z
+    .object({
+      type: z.literal('add-lead'),
+      name: text(120),
+      company: text(120),
+      role: text(160).optional(),
+      /** Where the model found the person. Required: every lead has a traceable public source. */
+      sourceUrl: httpUrl,
+      profileUrl: httpUrl.optional(),
+      reason: text(300),
+    })
+    .strict(),
 ])
 export type ProposedAction = z.infer<typeof proposedActionSchema>
 
@@ -83,6 +116,11 @@ export const RECOMMENDATION_KINDS = [
   { id: 'next-action', label: 'Next action' },
   { id: 'follow-up', label: 'Follow-up' },
   { id: 'insight', label: 'Insight' },
+  // v2
+  { id: 'resume-suggestion', label: 'Resume' },
+  { id: 'lead-proposal', label: 'Referral lead' },
+  { id: 'prep-plan', label: 'Interview prep' },
+  { id: 'application-update', label: 'Application update' },
 ] as const
 export type RecommendationKind = (typeof RECOMMENDATION_KINDS)[number]['id']
 const KIND_IDS = RECOMMENDATION_KINDS.map((k) => k.id) as [RecommendationKind, ...RecommendationKind[]]
@@ -114,8 +152,8 @@ type Checkable = {
 
 /** Cross-field rules shared by the incoming and the stored form of a recommendation. */
 export function refineRecommendation(r: Checkable, ctx: z.RefinementCtx): void {
-  if ((r.kind === 'job-fit' || r.action.type !== 'none') && !r.jobId) {
-    ctx.addIssue({ code: 'custom', path: ['jobId'], message: 'A job-fit recommendation or a proposed change needs a jobId' })
+  if ((r.kind === 'job-fit' || JOB_ACTIONS.includes(r.action.type)) && !r.jobId) {
+    ctx.addIssue({ code: 'custom', path: ['jobId'], message: 'A job-fit recommendation or a proposed change to a job needs a jobId' })
   }
   // Grounding: a claim that rests only on outside knowledge cannot be highly confident.
   if (r.evidence.every((e) => e.source === 'external') && r.confidence > AI_LIMITS.externalOnlyConfidence) {
@@ -177,7 +215,7 @@ export const aiEnvelopeSchema = z
 export const aiResultSchema = z
   .object({
     format: z.literal(AI_RESULT_FORMAT),
-    schemaVersion: z.literal(AI_SCHEMA_VERSION),
+    schemaVersion: z.union([z.literal(1), z.literal(2)]),
     contextId: text(80),
     generatedAt: isoTimestamp,
     generator: generatorSchema.optional(),
@@ -247,6 +285,8 @@ export const exportRecordSchema = z
         referrals: z.boolean(),
         referralNames: z.boolean(),
         topMatches: z.number().int().min(0).max(50),
+        /** Added with A6; older records have none. */
+        resume: z.boolean().optional(),
       })
       .strict(),
     counts: z
@@ -261,3 +301,56 @@ export const exportRecordSchema = z
   })
   .strict()
 export type ExportRecord = z.infer<typeof exportRecordSchema>
+
+// ---- Automation (A2/A3): private-repo sync settings ----------------------------------------
+
+/** Which sections go into an AI context export. Mirrors `ExportOptions` in context.ts. */
+export const exportOptionsSchema = z
+  .object({
+    profile: z.boolean(),
+    identity: z.boolean(),
+    compensation: z.boolean(),
+    pipeline: z.boolean(),
+    applications: z.boolean(),
+    notes: z.boolean(),
+    referrals: z.boolean(),
+    referralNames: z.boolean(),
+    topMatches: z.number().int().min(0).max(50),
+    resume: z.boolean(),
+  })
+  .strict()
+
+export const AUTOMATION_ID = 'automation' as const
+export const RESUME_MAX = 30_000
+
+const importedResultSchema = z.object({ name: z.string().min(1).max(200), sha: z.string().min(1).max(100) }).strict()
+
+/**
+ * Settings for the automated loop: this browser pushes a context export to the user's PRIVATE
+ * repository, a scheduled Claude routine writes results there, and this browser imports them.
+ * The access token lives only in this browser; backups never contain it.
+ */
+export const automationSettingsSchema = z
+  .object({
+    id: z.literal(AUTOMATION_ID),
+    /** owner/name of the private repository. */
+    repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/, 'Use owner/name'),
+    /** Fine-grained token with Contents read/write on that one repository. */
+    token: z.string().max(400).optional(),
+    autoSync: z.boolean(),
+    exportOptions: exportOptionsSchema,
+    /** Apply notes and follow-up dates without a click (append-only, reversible). */
+    autoAcceptLowRisk: z.boolean(),
+    resumeText: z.string().max(RESUME_MAX).optional(),
+    consentedAt: isoTimestamp.optional(),
+    lastPushAt: isoTimestamp.optional(),
+    lastPushHash: z.string().max(64).optional(),
+    lastResumeHash: z.string().max(64).optional(),
+    lastPullAt: isoTimestamp.optional(),
+    /** Result files already imported (name + git blob sha), newest last. */
+    importedResults: z.array(importedResultSchema).max(120),
+    lastError: z.string().max(400).optional(),
+    updatedAt: isoTimestamp,
+  })
+  .strict()
+export type AutomationSettings = z.infer<typeof automationSettingsSchema>

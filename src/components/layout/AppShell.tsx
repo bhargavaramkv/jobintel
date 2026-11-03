@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { AiSyncAgent } from '../../features/ai/AiSyncAgent'
 import { ReminderAgent } from '../../features/reminders/ReminderAgent'
 import { CommandPalette } from './CommandPalette'
 import { Header } from './Header'
@@ -44,6 +45,7 @@ export function AppShell() {
       </div>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ReminderAgent />
+      <AiSyncAgent />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
-const PAGES = ['', 'jobs', 'referrals', 'outreach', 'applications', 'analytics', 'profile', 'assistant', 'assistant?tab=inbox', 'assistant?tab=bridge']
+const PAGES = ['', 'jobs', 'referrals', 'outreach', 'applications', 'analytics', 'profile', 'assistant', 'assistant?tab=inbox', 'assistant?tab=bridge', 'assistant?tab=automation']
 
 /** Collect Content-Security-Policy violations and uncaught errors. */
 function watchProblems(page: Page) {

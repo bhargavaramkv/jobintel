@@ -1,4 +1,4 @@
-import { REJECT_REASONS } from '../../domain/jobs/actions'
+import { REJECT_REASONS, STAGE_LABEL } from '../../domain/jobs/actions'
 import type { Evidence, ProposedAction } from '../../domain/ai/schema'
 
 export const SOURCE_LABEL: Record<Evidence['source'], string> = {
@@ -33,5 +33,9 @@ export function describeAction(action: ProposedAction): string {
       return `Add a note to this job: “${action.note}”`
     case 'set-follow-up':
       return `Set a follow-up on ${action.followUpOn}${action.nextAction ? ` and next action “${action.nextAction}”` : ''}.`
+    case 'set-stage':
+      return `Move this application to “${STAGE_LABEL[action.stage]}”${action.note ? ` (${action.note})` : ''}.`
+    case 'add-lead':
+      return `Add ${action.name}${action.role ? `, ${action.role}` : ''} at ${action.company} as a referral lead (found at ${action.sourceUrl}). ${action.reason}`
   }
 }

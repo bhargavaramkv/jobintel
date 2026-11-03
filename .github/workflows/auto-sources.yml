@@ -1,0 +1,58 @@
+name: Auto-merge discovered sources
+
+# AI phase A4. The daily Claude routine pushes newly discovered job boards to a branch named
+# claude/sources-<date>. This workflow merges it into main ONLY if the branch changes nothing
+# but collector/sources.json, adds (never removes or edits) entries, every new board really lists
+# engineering roles in Bengaluru or Hyderabad, and the test suite passes. Otherwise it fails and
+# main is untouched.
+on:
+  push:
+    branches:
+      - 'claude/sources-**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-sources
+  cancel-in-progress: false
+
+jobs:
+  verify-and-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Only collector/sources.json may change
+        run: |
+          git fetch origin main
+          changed="$(git diff --name-only origin/main...HEAD)"
+          echo "Changed files:"; echo "$changed"
+          if [ -z "$changed" ] || [ "$changed" != "collector/sources.json" ]; then
+            echo "::error::A discovery branch may change collector/sources.json only."
+            exit 1
+          fi
+      - name: Verify new sources
+        run: |
+          git show origin/main:collector/sources.json > "$RUNNER_TEMP/base-sources.json"
+          node collector/verify-sources.ts "$RUNNER_TEMP/base-sources.json"
+      - name: Tests
+        run: npm test
+      - name: Merge into main and delete the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sources_from="$(git rev-parse HEAD)"
+          git checkout -B main origin/main
+          git checkout "$sources_from" -- collector/sources.json
+          git commit -m "feat(sources): add boards found by the daily discovery routine [skip ci]" -m "From ${GITHUB_REF_NAME}, verified by auto-sources."
+          git push origin main
+          git push origin --delete "${GITHUB_REF_NAME}"

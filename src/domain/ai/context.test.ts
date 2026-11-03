@@ -228,3 +228,11 @@ describe('AI context export: content', () => {
     expect(b.asOf).toBe('2026-11-03')
   })
 })
+
+describe('AI context export: resume (A6)', () => {
+  it('includes the stored resume when the switch is on, and nothing when off or empty', () => {
+    expect(build({ resume: true }, { resumeText: 'RESUME-TEXT C# .NET' }).resume).toBe('RESUME-TEXT C# .NET')
+    expect(text({ resume: false }, { resumeText: 'RESUME-TEXT' })).not.toContain('RESUME-TEXT')
+    expect(build({ resume: true }, { resumeText: '   ' }).resume).toBeUndefined()
+  })
+})

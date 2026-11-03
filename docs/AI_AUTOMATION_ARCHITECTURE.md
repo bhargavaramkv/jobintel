@@ -23,6 +23,27 @@ JobIntel is static files on GitHub Pages, so it holds no credentials and no serv
 Claude is therefore a deliberate, visible step that the user performs (§6). Everything on either side of
 that step is automated and validated.
 
+## 1a. Automation (A2–A8)
+
+```
+browser (open) ──auto-sync──► private repo: context/latest.json, profile/resume.md
+                                   │
+                    daily Claude routine 08:30 IST (owner's subscription)
+                    reads context + public feed, validates its JSON, writes results/<date>.json
+                    proposes new job boards on claude/sources-<date> in the public repo
+                                   │                                  │
+browser ◄──auto-import (Zod)── results/<date>.json        auto-sources.yml verifies + merges
+  inbox: notes/follow-ups applied automatically; everything else = one click ("Accept all ready")
+```
+
+- **Credential.** A fine-grained token with Contents read/write on the one private repo, pasted once. It lives
+  in IndexedDB only, is stripped from backups, and is sent only to `api.github.com`.
+- **Guard.** The client checks the repository is private before every sync and refuses otherwise.
+- **CSP.** `connect-src 'self' https://api.github.com`; nothing else can be reached.
+- **Same contract.** The routine validates with `scripts/validate-ai-result.ts`, which imports the app's own Zod
+  schema, and the app validates again on import. Schema v2 is a superset of v1.
+- **Efficiency.** One routine run per day; the context is pushed only when it changes and at most every 30 minutes.
+
 ## 2. What the existing code gave us (reused as is)
 
 | Need | Reused | Where |

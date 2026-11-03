@@ -10,7 +10,7 @@ import {
   type Recommendation,
   type StoredBriefing,
   type StoredRecommendation,
-} from './schema'
+} from './schema.ts'
 
 /**
  * Turns the text a model returned into validated, typed data, or a precise reason it can't.

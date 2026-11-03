@@ -19,7 +19,9 @@ Reviewed against `IMPLEMENTATION_PLAN.md` §2 on 2026-11-02.
 | Dependencies | ✅ | `npm audit`: 0 vulnerabilities (2026-11-02). Lockfile committed; CI uses `npm ci`. |
 | AI context export | ✅ | Built by allowlist, previewed byte for byte, consent required for every export and reset on any change. Sensitive items default off; message text, lead links and files are never exported. Exports are logged as counts only. See `AI_AUTOMATION_ARCHITECTURE.md` §4. |
 | AI output is untrusted | ✅ | Strict Zod schema, per-item validation, action whitelist with no send/submit/delete, evidence required, nothing applied on import, and a re-check against the live record on accept. Rendered as text. |
-| No AI service or key in the bundle | ✅ | `check:dist` rejects AI API hosts and key patterns; the CSP blocks cross-origin requests; E2E fails on any request leaving the origin during the AI flow. |
+| AI automation sync | ✅ | Optional. Talks only to `api.github.com` for the user's own repository and refuses a public one. The fine-grained token stays in IndexedDB, never in backups or the bundle. Context is pushed only with consent, using the same switches as manual export. |
+| AI-driven changes | ✅ | Only notes and follow-up dates are auto-applied (switchable). Leads need a public source and are never marked as known. Stage changes only move forward. Nothing is sent or submitted. Discovery can only add verified boards. |
+| No AI service or key in the bundle | ✅ | `check:dist` rejects AI API hosts and key patterns; the CSP allows only same-origin requests and `api.github.com`; E2E fails on any request leaving the origin during the AI flow. |
 | Accessibility | ✅ | axe-core (WCAG 2 A/AA) runs on every screen at desktop, tablet and mobile widths in E2E; serious/critical violations fail CI. |
 
 ## Residual risks

@@ -1,8 +1,8 @@
 export const DB_NAME = 'jobintel'
 /** IndexedDB structural version. Bump together with a new entry in migrations.ts. */
-export const DB_VERSION = 5
+export const DB_VERSION = 6
 /** Logical schema version of stored records, persisted in the `meta` store and in backups. */
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 export const STORES = {
   profile: 'profile',
@@ -13,4 +13,5 @@ export const STORES = {
   aiRecommendations: 'aiRecommendations',
   aiBriefings: 'aiBriefings',
   aiExports: 'aiExports',
+  aiSettings: 'aiSettings',
 } as const

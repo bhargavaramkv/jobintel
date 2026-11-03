@@ -21,13 +21,13 @@ Every phase is judged by one question: *does it raise the chance of an interview
 | Phase | Capability | Status |
 |---|---|---|
 | **A1** | AI foundation: context export with consent, schema v1, inbox, briefing, apply via existing repositories | ✅ Implemented |
-| A2 | Local scheduled runs (no browser hand-off to type) | Planned, gated on terms check |
-| A3 | Cloud scheduled tasks for the daily briefing (opt-in private repo) | Planned, needs your decision |
-| A4 | Company and ATS-board discovery with AI relevance judgement | Planned |
-| A5 | AI-assisted referral research and evidence-based outreach | Planned |
-| A6 | Job-specific resume analysis and tailoring | Planned |
-| A7 | Application status extraction from email | Planned |
-| A8 | Adaptive interview and career preparation | Planned |
+| A2 | Scheduled runs with no typing | ✅ Folded into A3 |
+| A3 | Automated loop with a private repo and a daily cloud routine | ✅ Implemented |
+| A4 | Company and ATS-board discovery, verified and merged automatically | ✅ Implemented |
+| A5 | Referral research (lead proposals with public sources) | ✅ Implemented |
+| A6 | Stored resume and job-specific resume suggestions | ✅ Implemented |
+| A7 | Application status from email | ✅ Implemented; needs a Gmail connector |
+| A8 | Interview prep plans | ✅ Implemented |
 
 ## A1 — Foundation ✅
 
@@ -139,7 +139,11 @@ Output kinds: `prep-plan`, `insight`. No new write actions.
 - Compare AI fit against the deterministic score over time and show disagreement rates in Analytics.
 - Optional encrypted export file for the context (useful only once a reader that can decrypt it exists).
 
-## Decisions I need from you before A2/A3
+## Decisions taken (2026-11-03)
+
+Automate as much as possible with minimal interaction. Unattended runs on the owner's Pro subscription are fine, kept to one run a day. A private repository holds the synced context. Referral research proposes people only with a public source and never asserts a relationship. The resume is stored.
+
+## Questions that were open before A2/A3
 
 1. After reading Anthropic's terms, are you comfortable with unattended scripted use of your Pro login (A2)?
 2. Would you accept a **private GitHub repo** holding a minimal context export for a cloud scheduled task (A3)?

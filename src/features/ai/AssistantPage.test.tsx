@@ -241,7 +241,7 @@ describe('AI assistant: importing and reviewing', () => {
     await user.click(await screen.findByRole('button', { name: /^Reject:/ }))
     await waitFor(async () => expect((await aiRecommendationsRepository.getAll()).rows[0].status).toBe('rejected'))
 
-    await user.click(screen.getByRole('tab', { name: /Export & import/ }))
+    await user.click(screen.getByRole('tab', { name: /export & import/i }))
     dialog = await importText(user, text)
     expect(await within(dialog).findByText(/already imported earlier/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: /^Add 0 to inbox/ }))

@@ -66,7 +66,7 @@ describe('AI repositories', () => {
   })
 })
 
-describe('migration v4 -> v5', () => {
+describe('migration v4 -> current (v6)', () => {
   /** Build a database exactly as release v4 left it (no AI stores), with real user data in it. */
   async function seedV4Database() {
     await resetDatabaseConnection()
@@ -94,17 +94,17 @@ describe('migration v4 -> v5', () => {
   }
 
   it('adds the AI stores and keeps every existing record', async () => {
-    expect(DB_VERSION).toBe(5)
+    expect(DB_VERSION).toBe(6)
     await seedV4Database()
     const db = await openDatabase()
-    for (const name of [STORES.aiRecommendations, STORES.aiBriefings, STORES.aiExports]) {
+    for (const name of [STORES.aiRecommendations, STORES.aiBriefings, STORES.aiExports, STORES.aiSettings]) {
       expect([...db.objectStoreNames]).toContain(name)
     }
     expect(await profileRepository.get()).toEqual(completeProfile())
     const { actions } = await jobActionsRepository.getAll()
     expect(actions).toHaveLength(1)
     expect(actions[0].decision).toBe('applied')
-    expect(await profileRepository.getSchemaVersion()).toBe(5)
+    expect(await profileRepository.getSchemaVersion()).toBe(6)
   })
 
   it('leaves the new stores empty and usable after upgrading', async () => {

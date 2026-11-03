@@ -13,7 +13,8 @@ export const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self'",
-  "connect-src 'self'",
+  // api.github.com: only for the optional sync with the user's own private repository (AI automation).
+  "connect-src 'self' https://api.github.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'none'",

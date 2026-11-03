@@ -11,7 +11,7 @@ import {
   restoreFromText,
   type BackupPayload,
 } from '../../storage/backup'
-import { useAiBriefings, useAiExports, useAiRecommendations } from '../ai/aiContext'
+import { useAiBriefings, useAiExports, useAiRecommendations, useAutomationSettings } from '../ai/aiContext'
 import { useJobActions } from '../jobs/useJobActions'
 import { useContacts } from '../referrals/useContacts'
 import { useOutreach } from '../outreach/outreachContext'
@@ -35,6 +35,7 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
   const { recommendations: aiRecs, replaceAll: replaceAiRecs } = useAiRecommendations()
   const { briefings: aiBriefings, replaceAll: replaceAiBriefings } = useAiBriefings()
   const { replaceAll: replaceAiExports } = useAiExports()
+  const { settings: automation, replaceAll: replaceAiSettings } = useAutomationSettings()
   const [exportOpen, setExportOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
@@ -143,6 +144,10 @@ export function DataPrivacySection({ dirty, notice, setNotice }: DataPrivacySect
           await replaceAiRecs(payload.aiRecommendations)
           await replaceAiBriefings(payload.aiBriefings)
           await replaceAiExports(payload.aiExports)
+          // Backups never carry the GitHub token: keep this browser's token if the restored settings use the same repository.
+          await replaceAiSettings(
+            payload.aiSettings.map((s) => (!s.token && automation?.token && automation.repo === s.repo ? { ...s, token: automation.token } : s)),
+          )
           setImportOpen(false)
           setNotice({ kind: 'success', text: 'Backup restored. Your profile has been replaced.' })
         }}
@@ -178,6 +183,7 @@ function ExportDialog({
   const { recommendations: aiRecs } = useAiRecommendations()
   const { briefings: aiBriefings } = useAiBriefings()
   const { exports: aiExports } = useAiExports()
+  const { settings: automationSettings } = useAutomationSettings()
   const [pass, setPass] = useState('')
   const [confirm, setConfirm] = useState('')
   const [ack, setAck] = useState(false)
@@ -208,6 +214,7 @@ function ExportDialog({
         aiRecommendations: [...aiRecs.values()],
         aiBriefings: [...aiBriefings.values()],
         aiExports: [...aiExports.values()],
+        aiSettings: automationSettings ? [automationSettings] : [],
       })
       downloadJson(backupFileName(), envelope)
       setPass('')
