@@ -1,6 +1,14 @@
 import { z } from 'zod'
 import { jobActionSchema, type JobAction } from '../domain/jobs/actions'
 import { contactSchema, type Contact } from '../domain/referrals/contacts'
+import {
+  exportRecordSchema,
+  storedBriefingSchema,
+  storedRecommendationSchema,
+  type ExportRecord,
+  type StoredBriefing,
+  type StoredRecommendation,
+} from '../domain/ai/schema'
 import { outreachMessageSchema, type OutreachMessage } from '../domain/outreach/messages'
 import { candidateProfileSchema, type CandidateProfile } from '../domain/profile/schema'
 import { SCHEMA_VERSION } from './constants'
@@ -57,6 +65,10 @@ const payloadSchema = z
     contacts: z.array(contactSchema).default([]),
     /** Added in data schema 4 (outreach history). */
     messages: z.array(outreachMessageSchema).default([]),
+    /** Added in data schema 5 (AI inbox, briefings, export log). Older backups have none. */
+    aiRecommendations: z.array(storedRecommendationSchema).default([]),
+    aiBriefings: z.array(storedBriefingSchema).default([]),
+    aiExports: z.array(exportRecordSchema).default([]),
   })
   .strict()
 
@@ -130,7 +142,16 @@ export function checkPassphrase(passphrase: string): string | null {
 export async function createBackup(
   profile: CandidateProfile | null,
   passphrase: string,
-  options: { iterations?: number; now?: Date; jobActions?: JobAction[]; contacts?: Contact[]; messages?: OutreachMessage[] } = {},
+  options: {
+    iterations?: number
+    now?: Date
+    jobActions?: JobAction[]
+    contacts?: Contact[]
+    messages?: OutreachMessage[]
+    aiRecommendations?: StoredRecommendation[]
+    aiBriefings?: StoredBriefing[]
+    aiExports?: ExportRecord[]
+  } = {},
 ): Promise<BackupEnvelope> {
   const weak = checkPassphrase(passphrase)
   if (weak) throw new BackupError('weak-passphrase', weak)
@@ -147,6 +168,9 @@ export async function createBackup(
     jobActions: options.jobActions ?? [],
     contacts: options.contacts ?? [],
     messages: options.messages ?? [],
+    aiRecommendations: options.aiRecommendations ?? [],
+    aiBriefings: options.aiBriefings ?? [],
+    aiExports: options.aiExports ?? [],
   }
   const ciphertext = new Uint8Array(
     await c.subtle.encrypt(

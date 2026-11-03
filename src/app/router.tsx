@@ -14,6 +14,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'jobs', lazy: async () => ({ Component: (await import('../features/jobs/JobsPage')).JobsPage }) },
+      { path: 'assistant', lazy: async () => ({ Component: (await import('../features/ai/AssistantPage')).AssistantPage }) },
       { path: 'referrals', lazy: async () => ({ Component: (await import('../features/referrals/ReferralsPage')).ReferralsPage }) },
       { path: 'outreach', lazy: async () => ({ Component: (await import('../features/outreach/OutreachPage')).OutreachPage }) },
       { path: 'applications', lazy: async () => ({ Component: (await import('../features/applications/ApplicationsPage')).ApplicationsPage }) },

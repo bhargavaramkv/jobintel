@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { RouterProvider } from 'react-router-dom'
+import { AiProvider } from '../features/ai/AiProvider'
 import { JobActionsProvider } from '../features/jobs/JobActionsProvider'
 import { JobFeedProvider } from '../features/jobs/JobFeedProvider'
 import { ProfileProvider } from '../features/profile/ProfileProvider'
@@ -14,9 +15,11 @@ export function App() {
       <JobActionsProvider>
         <ContactsProvider>
           <OutreachProvider>
-            <JobFeedProvider>
-              <RouterProvider router={router} />
-            </JobFeedProvider>
+            <AiProvider>
+              <JobFeedProvider>
+                <RouterProvider router={router} />
+              </JobFeedProvider>
+            </AiProvider>
           </OutreachProvider>
         </ContactsProvider>
       </JobActionsProvider>

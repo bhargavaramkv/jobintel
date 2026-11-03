@@ -96,6 +96,7 @@ export function JobActionsProvider({ children }: { children: ReactNode }) {
         const existing = get(jobId)
         if (existing) await commit(jobId, withDetails(existing, details))
       },
+      putAction: (action: JobAction) => commit(action.jobId, action),
       replaceAll: async (rows: JobAction[]) => {
         await jobActionsRepository.replaceAll(rows)
         store.current = new Map(rows.map((a) => [a.jobId, a]))

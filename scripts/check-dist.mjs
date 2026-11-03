@@ -19,6 +19,8 @@ const SECRET_PATTERNS = [
 const TRACKER_PATTERNS = [
   [/googletagmanager\.com|google-analytics\.com/, 'Google Analytics'],
   [/plausible\.io|segment\.(io|com)|mixpanel\.com|hotjar\.com/, 'Analytics service'],
+  // The app never calls an AI service: the user hands a file to Claude themselves.
+  [/api\.anthropic\.com|api\.openai\.com|generativelanguage\.googleapis\.com/, 'AI API endpoint'],
 ]
 
 function* walk(dir) {
@@ -51,7 +53,7 @@ for (const file of walk(DIST)) {
   }
   if (
     isData &&
-    /"(primarySkills|professionalSummary|displayName|noticePeriod|compensation|pastEmployers|schools|knowsPersonally|workedTogether|rejectReasons|resumeVersion|repliedOn|contactIds)"/.test(text)
+    /"(primarySkills|professionalSummary|displayName|noticePeriod|compensation|pastEmployers|schools|knowsPersonally|workedTogether|rejectReasons|resumeVersion|repliedOn|contactIds|aiRecommendations|aiBriefings|aiExports|jobintel-ai-context|jobintel-ai-result)"/.test(text)
   ) {
     console.error(`✖ Candidate profile field found in public data: ${file}`)
     failures++

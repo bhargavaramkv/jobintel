@@ -45,6 +45,7 @@ Stable layout only; for specifics (files, symbols, status) ask the graph — thi
 | Screens, one folder per feature | `src/features/*` (dashboard, jobs, profile, applications, outreach, referrals, reminders, analytics, shared) |
 | Domain logic (pure, no React) | `src/domain/*` (mirrors the features, plus `match`); `src/domain/jobs/feedSchema.ts` is the Zod feed contract shared with the collector |
 | Persistence (IndexedDB) | `src/storage/` |
+| AI assistant (consented export, validated import, recommendation inbox) | `src/domain/ai/` (pure), `src/features/ai/`; design in `docs/AI_AUTOMATION_ARCHITECTURE.md`, plan in `docs/AI_AUTOMATION_ROADMAP.md` |
 | Job collector (Greenhouse/Lever/Ashby, runs in Actions) | `collector/`; writes `public/data/jobs.json` |
 | CI | `.github/workflows/` (`pages.yml` deploy, `scan.yml` job scan, `graph.yml` graph refresh) |
 | Tests | `*.test.ts(x)` beside the code, plus `e2e/` (Vitest + Playwright) |
@@ -54,4 +55,6 @@ Stable layout only; for specifics (files, symbols, status) ask the graph — thi
 - Collector scope is Bengaluru + Hyderabad only; all work modes (onsite/hybrid/remote). Target roles: full-stack / backend / .NET / product engineering, SDE-2 level, product (SaaS) companies.
 - The site is public; profile data lives only in the user's browser (IndexedDB). Never commit personal backups (`*.jibak.json`, `*.backup.json`).
 - The feed contract (`feedSchema.ts`) is shared by the collector and the app — change it in one place.
-- All planned phases (1–9) are implemented; `TODO.md` is the source of truth for status.
+- All planned phases (1–9) are implemented; `TODO.md` is the source of truth for status. The AI track (A1–A8) is tracked there too.
+- AI output is untrusted input. The action whitelist in `src/domain/ai/schema.ts` must never gain an action that sends, submits, edits the profile or deletes. Change the contract by adding a schema version and keeping the old one parseable, never by loosening a limit.
+- The AI context export (`src/domain/ai/context.ts`) is an allowlist. Add a field deliberately, default sensitive ones off, and extend `context.test.ts` (it greps the output for sentinel personal strings). The app never calls an AI service and holds no key; `check:dist` enforces it.
