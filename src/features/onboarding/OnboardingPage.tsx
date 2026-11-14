@@ -5,6 +5,7 @@ import { AsyncView } from '../../components/ui/AsyncView'
 import { ChoiceGroup } from '../../components/ui/ChoiceGroup'
 import { TextAreaField, TextField } from '../../components/ui/Field'
 import { TagInput } from '../../components/ui/TagInput'
+import { inferFromTex, type ResumeInference } from '../../domain/resume/infer'
 import { draftFromProfile, profileFromDraft, type DraftErrors, type ProfileDraft } from '../../domain/profile/form'
 import { calculateReadiness } from '../../domain/profile/readiness'
 import { COMPANY_TYPES, CURRENCIES, SENIORITY_OPTIONS, WORK_MODES, type Skill } from '../../domain/profile/schema'
@@ -42,6 +43,17 @@ const SENIORITY_CHOICES = SENIORITY_OPTIONS.map((s) => ({ value: s, label: s }))
 const skillName = (s: Skill) => s.name
 const newSkill = (name: string): Skill => ({ name })
 const text = (s: string) => s
+
+/** Fills roles, seniority and skills from the resume, only where the user has not entered anything yet. */
+function fillFromResume(d: ProfileDraft, inferred: ResumeInference): ProfileDraft {
+  return {
+    ...d,
+    targetRoles: d.targetRoles.length ? d.targetRoles : inferred.targetRoles,
+    targetSeniority: d.targetSeniority.length ? d.targetSeniority : inferred.targetSeniority,
+    primarySkills: d.primarySkills.length ? d.primarySkills : inferred.primarySkills.map(newSkill),
+    secondarySkills: d.secondarySkills.length ? d.secondarySkills : inferred.secondarySkills.map(newSkill),
+  }
+}
 
 const AUTOMATION_CHOICES: Array<{ value: AutomationMode; title: string; text: string }> = [
   { value: 'auto', title: 'Auto-submit above my score', text: 'Applies on its own when the score is high and the form has no screening questions.' },
@@ -85,6 +97,10 @@ function OnboardingForm() {
         navigate('/')
       }
       return
+    }
+    if (step === 'resume' && state.resumes.master) {
+      const inferred = inferFromTex(state.resumes.master.tex)
+      setDraft((d) => fillFromResume(d, inferred))
     }
     goto(STEPS[index + 1])
   }
@@ -131,6 +147,7 @@ function OnboardingForm() {
           )}
           {step === 'roles' && (
             <>
+              <p className="list__meta">{state.resumes.master ? 'Suggested from your resume. Edit anything that is wrong.' : 'Upload your resume in step 1 and these are suggested for you.'}</p>
               <TagInput label="Target roles" items={draft.targetRoles} getLabel={text} create={text} onChange={(v) => set('targetRoles', v)} error={errors.targetRoles} />
               <ChoiceGroup legend="Target seniority" options={SENIORITY_CHOICES} selected={draft.targetSeniority} onChange={(v) => set('targetSeniority', v)} />
               <TagInput label="Excluded title words" items={draft.excludedTitles} getLabel={text} create={text} onChange={(v) => set('excludedTitles', v)} optional />
@@ -138,6 +155,7 @@ function OnboardingForm() {
           )}
           {step === 'skills' && (
             <>
+              <p className="list__meta">{state.resumes.master ? 'Found in your resume. Add or remove skills as needed.' : 'Upload your resume in step 1 and skills are found for you.'}</p>
               <TagInput label="Primary skills" items={draft.primarySkills} getLabel={skillName} create={newSkill} onChange={(v) => set('primarySkills', v)} error={errors.primarySkills} />
               <TagInput
                 label="Secondary skills"
