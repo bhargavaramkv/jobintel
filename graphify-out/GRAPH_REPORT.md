@@ -1,7 +1,7 @@
-# Graph Report - jobintel  (2026-11-03)
+# Graph Report - jobintel  (2026-11-14)
 
 ## Corpus Check
-- 167 files · ~245,376 words
+- 167 files · ~279,445 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 14 file(s) not represented in the graph (top: .css 11, (none) 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9a6bc548`
+- Built from commit: `82ec3e68`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -444,16 +444,16 @@ Nodes (4): @testing-library/jest-dom@^7.0.1, @testing-library/react@^16.3.3, @te
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `JobIntel architecture (v0.9)` connect `JobIntel architecture (v0.9)` to `aiRepository.test.ts`, `DashboardPage.tsx`, `Fit Score Factors`, `actions.ts`, `AI Recommendation Schema`, `Match Engine Tests`, `OutreachPage.tsx`, `Record Repository Interface`, `contacts.ts`, `AI Privacy Boundaries`?**
-  _High betweenness centrality (0.080) - this node is a cross-community bridge._
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
 - **What connects `IndexedDB storage with append-only migrations`, `Follow-up limit (2, a week apart, none after reply)`, `ReminderAgent` to the rest of the system?**
   _56 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `aiRepository.test.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.14059196617336153 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `react` to `AI Assistant Hooks`, `Data Privacy and Backup UI`, `OutreachPage.tsx`, `ProfilePage.tsx`, `contacts.ts`, `Form Field Primitives`, `package.json`, `App.tsx`, `Routing and Navigation`, `DashboardPage.tsx`, `ExportPanel.tsx`, `AutomationPanel.tsx`, `actions.ts`, `Record Repository Interface`, `Job Feed Loading`, `Runtime Dependencies`, `TagInput.tsx`, `CandidateProfile`, `AiSyncAgent.tsx`, `AiProvider.tsx`?**
-  _High betweenness centrality (0.061) - this node is a cross-community bridge._
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Should `Scan Workflow (scan.yml)` be split into smaller, more focused modules?**
   _Cohesion score 0.04717853839037928 - nodes in this community are weakly interconnected._
 - **Why does `Phase 9 - Reliability, security and polish` connect `Dashboard and Backup Features` to `AI Privacy Boundaries (2)`, `JobIntel architecture (v0.9)`?**
-  _High betweenness centrality (0.061) - this node is a cross-community bridge._
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **Should `Pages Deploy Workflow` be split into smaller, more focused modules?**
   _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
