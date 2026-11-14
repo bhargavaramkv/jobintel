@@ -51,7 +51,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           cp collector/sources.json "$RUNNER_TEMP/accepted-sources.json"
-          git checkout -B main origin/main
+          git checkout -f -B main origin/main
           cp "$RUNNER_TEMP/accepted-sources.json" collector/sources.json
           git commit -m "feat(sources): add boards found by the daily discovery routine [skip ci]" -m "From ${GITHUB_REF_NAME}, verified by auto-sources."
           git push origin main

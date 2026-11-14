@@ -238,10 +238,14 @@ describe('Applied / Not interested / notes', () => {
     await user.click(within(applied).getByRole('button', { name: /Add note/ }))
     await user.type(within(applied).getByLabelText('Private note'), 'Applied via careers page')
     await user.click(within(applied).getByRole('button', { name: 'Save note' }))
-    expect(await within(applied).findByText(/Applied via careers page/)).toBeInTheDocument()
+    // Re-query the card (it can re-render) and allow for slow CI runners.
+    await waitFor(
+      () => expect(within(card(/Software Engineer 2/)).getByText(/Applied via careers page/)).toBeInTheDocument(),
+      { timeout: 5000 },
+    )
 
     // Undo returns it to review
-    await user.click(within(applied).getByRole('button', { name: /Undo applied/ }))
+    await user.click(within(card(/Software Engineer 2/)).getByRole('button', { name: /Undo applied/ }))
     await user.click(screen.getByRole('tab', { name: /To review/ }))
     expect(await screen.findByRole('link', { name: /Software Engineer 2/ })).toBeInTheDocument()
   })
