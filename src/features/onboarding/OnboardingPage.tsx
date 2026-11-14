@@ -33,10 +33,17 @@ const STEP_FIELDS: Record<Step, Array<keyof ProfileDraft>> = {
 
 const newSkill = (name: string): Skill => ({ name })
 
-/** Fills roles, seniority and skills from the resume, only where the user has not entered anything yet. */
+const pick = (entered: string, suggested: string | undefined) => (entered.trim() ? entered : (suggested ?? entered))
+
+/** Fills the profile from the resume, only where the user has not entered anything yet. */
 function fillFromResume(d: ProfileDraft, inferred: ResumeInference): ProfileDraft {
   return {
     ...d,
+    displayName: pick(d.displayName, inferred.displayName),
+    currentTitle: pick(d.currentTitle, inferred.currentTitle),
+    currentCompany: pick(d.currentCompany, inferred.currentCompany),
+    yearsExperience: pick(d.yearsExperience, inferred.yearsExperience?.toString()),
+    professionalSummary: pick(d.professionalSummary, inferred.professionalSummary),
     targetRoles: d.targetRoles.length ? d.targetRoles : inferred.targetRoles,
     targetSeniority: d.targetSeniority.length ? d.targetSeniority : inferred.targetSeniority,
     primarySkills: d.primarySkills.length ? d.primarySkills : inferred.primarySkills.map(newSkill),

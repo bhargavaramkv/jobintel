@@ -11,6 +11,15 @@ describe('inferFromTex', () => {
     expect(r.primarySkills.length).toBeLessThanOrEqual(8)
   })
 
+  it('reads the name, current job, years and summary', () => {
+    const r = inferFromTex(SAMPLE_TEX, 2026)
+    expect(r.displayName).toBe('Sample Person')
+    expect(r.currentTitle).toBe('Software Engineer II')
+    expect(r.currentCompany).toBe('Example Payments')
+    expect(r.yearsExperience).toBe(4)
+    expect(r.professionalSummary).toMatch(/^Backend-leaning full-stack engineer building services in C# and .NET/)
+  })
+
   it('keeps skills that appear only outside the Skills section as secondary', () => {
     const tex = String.raw`\documentclass{article}\begin{document}
 \section{Skills}

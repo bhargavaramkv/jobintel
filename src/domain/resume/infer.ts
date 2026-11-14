@@ -1,9 +1,16 @@
+import { LIMITS } from '../profile/schema'
+
 /**
  * Suggests roles, seniority and skills from a LaTeX resume. Pure and local: a fixed skill
  * dictionary and simple rules, nothing is sent anywhere.
  */
 
 export interface ResumeInference {
+  displayName?: string
+  currentTitle?: string
+  currentCompany?: string
+  yearsExperience?: number
+  professionalSummary?: string
   targetRoles: string[]
   targetSeniority: string[]
   primarySkills: string[]
@@ -47,9 +54,30 @@ function sectionBody(text: string, name: string): string {
   return next < 0 ? rest : rest.slice(0, next)
 }
 
-/** Titles from \role{Title}{Company}{Dates} lines, newest first (the resume lists newest first). */
-function roleTitles(text: string): string[] {
-  return [...text.matchAll(/\\role\{([^}]+)\}/g)].map((m) => m[1].trim())
+interface RoleEntry {
+  title: string
+  company: string
+  dates: string
+}
+
+/** Entries from \role{Title}{Company}{Dates} lines, newest first (the resume lists newest first). */
+function roleEntries(text: string): RoleEntry[] {
+  return [...text.matchAll(/\\role\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/g)].map((m) => ({
+    title: m[1].trim(),
+    company: m[2].trim(),
+    dates: m[3],
+  }))
+}
+
+/** Full name from the header line \LARGE \textbf{Name}. */
+function nameFrom(text: string): string | undefined {
+  return text.match(/\\LARGE\s*\\textbf\{([^}]+)\}/)?.[1].trim()
+}
+
+/** Years from the earliest dated role until this year. */
+function yearsFrom(entries: RoleEntry[], thisYear: number): number | undefined {
+  const years = entries.flatMap((e) => [...e.dates.matchAll(/\b(?:19|20)\d{2}\b/g)].map((m) => Number(m[0])))
+  return years.length ? Math.max(0, thisYear - Math.min(...years)) : undefined
 }
 
 function seniorityFrom(title: string): string[] {
@@ -62,8 +90,10 @@ function seniorityFrom(title: string): string[] {
   return []
 }
 
-export function inferFromTex(tex: string): ResumeInference {
+export function inferFromTex(tex: string, thisYear = new Date().getFullYear()): ResumeInference {
   const text = plainText(tex)
+  const entries = roleEntries(text)
+  const summary = sectionBody(text, 'Summary').replace(/\s+/g, ' ').trim()
   const found = findSkills(text)
   const names = new Set(found.map((f) => f.term))
   const inSkillsSection = findSkills(sectionBody(text, 'Skills')).map((f) => f.term)
@@ -72,7 +102,7 @@ export function inferFromTex(tex: string): ResumeInference {
   const primary = inSkillsSection.slice(0, MAX_SKILLS)
   const secondary = found.map((f) => f.term).filter((t) => !primary.includes(t)).slice(0, MAX_SKILLS)
 
-  const current = roleTitles(text)[0] ?? ''
+  const current = entries[0]?.title ?? ''
   const roles: string[] = []
   if (current) roles.push(current.replace(/\s+(I|II|III|IV)$/, ''))
   const hasBackend = BACKEND_SIGNALS.some((s) => names.has(s))
@@ -84,6 +114,11 @@ export function inferFromTex(tex: string): ResumeInference {
   }
 
   return {
+    displayName: nameFrom(text),
+    currentTitle: entries[0]?.title,
+    currentCompany: entries[0]?.company,
+    yearsExperience: yearsFrom(entries, thisYear),
+    professionalSummary: summary && summary.length <= LIMITS.summary ? summary : undefined,
     targetRoles: [...new Set(roles)].slice(0, MAX_ROLES),
     targetSeniority: seniorityFrom(current),
     primarySkills: primary,
