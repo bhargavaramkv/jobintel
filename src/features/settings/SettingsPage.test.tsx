@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { renderPage } from '../../test/renderPrototype'
+import { Header } from '../../components/layout/Header'
 import { DiscoveryPage } from '../discovery/DiscoveryPage'
 import { SettingsPage } from './SettingsPage'
 
@@ -27,6 +28,23 @@ describe('Settings', () => {
     await user.type(field, '12')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(screen.getByRole('status')).toHaveTextContent(/Simulated: limits settings saved/)
+  })
+
+  it('Reset discards unsaved edits instead of keeping the old draft', async () => {
+    const user = userEvent.setup()
+    renderPage(
+      <>
+        <Header />
+        <SettingsPage />
+      </>,
+      { ...opts, route: '/settings?section=profile' },
+    )
+    const name = screen.getByLabelText(/^Name/)
+    expect(name).toHaveValue('Arjun Rao')
+    await user.clear(name)
+    await user.type(name, 'Someone Else')
+    await user.click(screen.getByRole('button', { name: /Reset/ }))
+    expect(screen.getByLabelText(/^Name/)).toHaveValue('Arjun Rao')
   })
 
   it('shows each permission with its implied mode', () => {

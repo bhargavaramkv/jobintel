@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react'
 import { PrototypeTag } from '../ui/PrototypeTag'
 
-export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
+export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="page-head">
       <div>
@@ -11,7 +10,6 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
         </div>
         {subtitle && <p className="page-head__subtitle">{subtitle}</p>}
       </div>
-      {children && <div className="page-head__actions">{children}</div>}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { initialState, reducer } from './store'
 import { PrototypeContext } from './usePrototype'
 import type { Scenario } from './types'
 
-export const TICK_MS = 1500
+const TICK_MS = 1500
 
 export function PrototypeProvider({ children, scenario = 'demo' }: { children: ReactNode; scenario?: Scenario }) {
   const [state, dispatch] = useReducer(reducer, scenario, initialState)

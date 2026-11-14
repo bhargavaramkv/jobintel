@@ -16,7 +16,7 @@ export function ChoiceGroup<T extends string>({ legend, options, selected, onCha
     onChange(options.map((o) => o.value).filter((v) => next.includes(v)))
   }
   return (
-    <fieldset className="field choices-field">
+    <fieldset className="field">
       <legend className="field__label">{legend}</legend>
       <div className="choices">
         {options.map((o) => (

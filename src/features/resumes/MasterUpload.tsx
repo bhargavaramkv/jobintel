@@ -1,6 +1,6 @@
 import { AlertCircle, Upload } from 'lucide-react'
 import { useId, useState, type ChangeEvent } from 'react'
-import { validateTexUpload } from '../../domain/resume/tex'
+import { validateTexFile, validateTexUpload } from '../../domain/resume/tex'
 import { usePrototype } from '../../prototype/usePrototype'
 
 /** Reads a .tex file in the browser, validates it and stores it in memory only. */
@@ -13,6 +13,12 @@ export function MasterUpload({ replace = false }: { replace?: boolean }) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+    // Name and size are checked before the file is read into memory.
+    const early = validateTexFile(file.name, file.size)
+    if (!early.ok) {
+      setError(early.error)
+      return
+    }
     const text = await file.text()
     const result = validateTexUpload(file.name, file.size, text)
     if (!result.ok) {

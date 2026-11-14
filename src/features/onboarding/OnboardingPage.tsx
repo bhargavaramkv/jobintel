@@ -210,11 +210,12 @@ function OnboardingForm() {
 
 export function OnboardingPage() {
   const q = useSimulatedQuery((s) => s.profile)
+  const { state } = usePrototype()
   return (
     <div className="stack">
       <PageHeader title="Onboarding" subtitle="Seven short steps. Everything stays in memory in this prototype." />
       <AsyncView status={q.status} onRetry={q.retry} emptyTitle="Nothing to set up">
-        <OnboardingForm />
+        <OnboardingForm key={state.epoch} />
       </AsyncView>
     </div>
   )

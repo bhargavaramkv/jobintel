@@ -38,5 +38,5 @@ test('the error scenario offers Retry, and Demo recovers', async ({ page }) => {
   await retry.click()
   await expect(retry).toBeVisible()
   await scenario(page, 'Demo')
-  await expect(page.getByRole('tab', { name: /Selected/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^Selected \(/ })).toBeVisible()
 })

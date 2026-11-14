@@ -36,6 +36,7 @@ export function initialState(scenario: Scenario = 'demo'): PrototypeState {
     scenario,
     now: new Date(PROTOTYPE_NOW).toISOString(),
     seq: 1000,
+    epoch: 0,
     run: { status: 'idle', step: 0, total: RUN_SCRIPT.length, lastRunAt: scenario === 'empty' ? undefined : minutesAgo(1100) },
     toasts: [],
   }
@@ -125,12 +126,14 @@ function tick(s: PrototypeState): PrototypeState {
   if (s.run.status !== 'running') return s
   const step = RUN_SCRIPT[s.run.step]
   const moved = runEffect(s, step.effect)
+  // The script names demo postings; with no jobs loaded, log a generic note instead.
+  const noJobs = step.kind === 'evaluate' && s.jobs.length === 0
   let next = note(moved.state, {
     kind: step.kind,
-    title: step.title,
-    detail: moved.app ? `${step.detail} (${label(s, moved.app)})` : step.detail,
+    title: noJobs ? 'No jobs to evaluate (simulated)' : step.title,
+    detail: noJobs ? undefined : moved.app ? `${step.detail} (${label(s, moved.app)})` : step.detail,
     extra: {
-      log: step.log,
+      ...(noJobs ? {} : { log: step.log }),
       ...(moved.app ? { applicationId: moved.app.id } : {}),
       ...(moved.app && step.effect === 'queueApproval' ? { needsIntervention: true } : {}),
     },
@@ -261,11 +264,11 @@ export function reducer(s: PrototypeState, a: Action): PrototypeState {
     case 'toast/dismiss':
       return { ...s, toasts: s.toasts.filter((t) => t.id !== a.id) }
     case 'scenario/set': {
-      const next = initialState(a.scenario)
+      const next = { ...initialState(a.scenario), epoch: s.epoch + 1 }
       return { ...next, toasts: [{ id: next.seq, message: `Simulated: switched to the ${a.scenario} scenario.` }] }
     }
     case 'reset': {
-      const next = initialState(s.scenario)
+      const next = { ...initialState(s.scenario), epoch: s.epoch + 1 }
       return { ...next, toasts: [{ id: next.seq, message: 'Simulated: prototype data reset.' }] }
     }
   }

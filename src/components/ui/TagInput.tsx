@@ -1,5 +1,5 @@
 import { AlertCircle, X } from 'lucide-react'
-import { useId, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react'
 import { LIMITS } from '../../domain/profile/schema'
 import { splitTagInput, validateTag } from '../../domain/profile/tags'
 
@@ -16,8 +16,6 @@ export interface TagInputProps<T> {
   /** Names that are taken by a sibling list (e.g. primary vs secondary skills). */
   reserved?: readonly string[]
   reservedMessage?: (name: string) => string
-  renderExtra?: (item: T, index: number) => ReactNode
-  suggestions?: readonly string[]
 }
 
 /**
@@ -37,8 +35,6 @@ export function TagInput<T>({
   error,
   reserved = [],
   reservedMessage = (n) => `“${n}” is already used elsewhere`,
-  renderExtra,
-  suggestions,
 }: TagInputProps<T>) {
   const id = useId()
   const [text, setText] = useState('')
@@ -107,8 +103,6 @@ export function TagInput<T>({
   const shown = error ?? localError
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
-  const listId = `${id}-suggestions`
-  const available = suggestions?.filter((s) => !labels.some((l) => l.toLowerCase() === s.toLowerCase()))
 
   return (
     <div className="field">
@@ -131,7 +125,6 @@ export function TagInput<T>({
                 <span className="tag__text" title={name}>
                   {name}
                 </span>
-                {renderExtra?.(item, i)}
                 <button
                   type="button"
                   className="tag__remove"
@@ -158,18 +151,10 @@ export function TagInput<T>({
           onPaste={onPaste}
           onBlur={() => text.trim() && commit()}
           maxLength={LIMITS.tag + 20}
-          list={available?.length ? listId : undefined}
           aria-invalid={shown ? 'true' : undefined}
           aria-describedby={[hint ? hintId : '', shown ? errorId : ''].filter(Boolean).join(' ') || undefined}
           autoComplete="off"
         />
-        {available?.length ? (
-          <datalist id={listId}>
-            {available.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-        ) : null}
       </div>
       {hint && (
         <span id={hintId} className="field__hint">

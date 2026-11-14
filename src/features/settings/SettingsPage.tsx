@@ -197,6 +197,7 @@ function NotificationsSection({ settings }: { settings: PrototypeSettings }) {
 
 export function SettingsPage() {
   const [params] = useSearchParams()
+  const { state } = usePrototype()
   const q = useSimulatedQuery((s) => s.settings)
   const requested = params.get('section')
   const section: SectionId = SECTIONS.some((s) => s.id === requested) ? (requested as SectionId) : 'profile'
@@ -219,7 +220,7 @@ export function SettingsPage() {
               </Link>
             ))}
           </nav>
-          <section className="panel" aria-label={SECTIONS.find((s) => s.id === section)!.label}>
+          <section key={state.epoch} className="panel" aria-label={SECTIONS.find((s) => s.id === section)!.label}>
             <div className="panel__body">{body[section]}</div>
           </section>
         </div>

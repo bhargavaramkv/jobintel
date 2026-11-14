@@ -108,6 +108,7 @@ export function ApplicationsPage() {
           </div>
           <div className={selected ? 'split split--detail-only' : 'split split--list-only'}>
             <div className="split__list stack">
+              {filter !== 'all' && !apps.some((a) => a.status === filter) && <p className="secondary">No applications with this status.</p>}
               {APP_STATUSES.filter((s) => filter === 'all' || filter === s).map((status) => {
                 const group = apps.filter((a) => a.status === status)
                 if (group.length === 0) return null

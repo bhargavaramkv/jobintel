@@ -1,6 +1,6 @@
 import { Check, X } from 'lucide-react'
 import { useMemo } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { AsyncView } from '../../components/ui/AsyncView'
 import { ScoreMeter } from '../../components/ui/ScoreMeter'
@@ -61,7 +61,7 @@ function Detail({ job, match }: { job: MockJob; match: MatchResult }) {
       <div>
         <h2>{job.title}</h2>
         <p className="secondary">{job.company}, {job.locations.join(' / ')}, {job.workMode}</p>
-        <p className="muted mono">{job.url}</p>
+        <p className="muted mono" style={{ overflowWrap: 'anywhere' }}>{job.url}</p>
       </div>
       <div className="row">
         <ScoreMeter score={match.score} />
@@ -134,7 +134,6 @@ function Detail({ job, match }: { job: MockJob; match: MatchResult }) {
 export function DiscoveryPage() {
   const { jobId } = useParams()
   const [params] = useSearchParams()
-  const navigate = useNavigate()
   const q = useSimulatedQuery((s) => ({ jobs: s.jobs, profile: s.profile }), (d) => d.jobs.length === 0)
   const { jobs, profile } = q.data
   const matches = useMemo(() => new Map(jobs.map((j) => [j.id, matchJob(j, profile)])), [jobs, profile])
@@ -156,13 +155,13 @@ export function DiscoveryPage() {
         emptyAction={<Link className="btn btn--primary" to="/onboarding">Go to onboarding</Link>}
       >
         <div className="stack">
-          <div className="tabs" role="tablist" aria-label="Agent verdict">
+          <nav className="tabs" aria-label="Agent verdict">
             {VERDICTS.map((v) => (
-              <button key={v.id} type="button" role="tab" className="tab" aria-selected={verdict === v.id} onClick={() => navigate(`/jobs?verdict=${v.id}`)}>
+              <Link key={v.id} className="tab" to={`/jobs?verdict=${v.id}`} aria-current={verdict === v.id ? 'page' : undefined}>
                 {v.label} ({count(v.id)})
-              </button>
+              </Link>
             ))}
-          </div>
+          </nav>
           <div className={selected ? 'split split--detail-only' : 'split split--list-only'}>
             <div className="split__list stack">
               {list.length === 0 && <p className="secondary">No jobs in this tab.</p>}

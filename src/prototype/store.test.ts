@@ -83,6 +83,12 @@ describe('prototype store', () => {
     expect(s.applications[0].status).toBe('queued')
   })
 
+  it('does not log demo job names when the empty scenario runs', () => {
+    const s = run(initialState('empty'), { type: 'agent/start' }, ...ticks(8))
+    expect(s.run.status).toBe('idle')
+    expect(s.events.map((e) => `${e.title} ${e.detail ?? ''}`).join('\n')).not.toMatch(/Kestrel|Orchid|Corvid/)
+  })
+
   it('supports the empty scenario and reset', () => {
     let s = run(demo(), { type: 'scenario/set', scenario: 'empty' })
     expect(s.scenario).toBe('empty')

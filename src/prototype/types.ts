@@ -139,6 +139,8 @@ export interface PrototypeState {
   scenario: Scenario
   now: string
   seq: number
+  /** Bumped by Reset and scenario changes so forms that copy state into local drafts remount. */
+  epoch: number
   onboarded: boolean
   profile: CandidateProfile
   jobs: MockJob[]

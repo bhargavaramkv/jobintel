@@ -20,7 +20,7 @@ const BASE: Content = {
 }
 
 /** Builds a complete LaTeX resume. Used for the master and every generated variant. */
-export function texFor(c: Content): string {
+function texFor(c: Content): string {
   return String.raw`\documentclass[10pt,a4paper]{article}
 \usepackage[margin=0.8in]{geometry}
 \usepackage[T1]{fontenc}

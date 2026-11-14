@@ -1,7 +1,7 @@
 import { dayKey } from './clock'
 import type { Application, PrototypeState } from './types'
 
-export const ATTENTION_STATUSES = ['awaiting-approval', 'blocked', 'failed'] as const
+const ATTENTION_STATUSES = ['awaiting-approval', 'blocked', 'failed'] as const
 
 export const needsAttention = (s: PrototypeState): Application[] =>
   s.applications.filter((a) => (ATTENTION_STATUSES as readonly string[]).includes(a.status))

@@ -13,15 +13,15 @@ const opts = { path: '/jobs/:jobId?' }
 describe('Discovery', () => {
   it('lists verdict tabs with counts', () => {
     renderPage(page, { ...opts, route: '/jobs' })
-    expect(screen.getByRole('tab', { name: 'Selected (5)' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: 'Needs review (3)' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Rejected (4)' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Selected (5)' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Needs review (3)' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Rejected (4)' })).toBeInTheDocument()
   })
 
   it('shows the agent reasons on the Rejected tab', async () => {
     const user = userEvent.setup()
     renderPage(page, { ...opts, route: '/jobs' })
-    await user.click(screen.getByRole('tab', { name: /Rejected/ }))
+    await user.click(screen.getByRole('link', { name: /^Rejected \(/ }))
     expect(screen.getByText(/Security role; your targets are backend and full-stack/)).toBeInTheDocument()
   })
 

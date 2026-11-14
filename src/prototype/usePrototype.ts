@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type Dispatch } from 'r
 import type { Action } from './store'
 import type { PrototypeState } from './types'
 
-export interface PrototypeContextValue {
+interface PrototypeContextValue {
   state: PrototypeState
   dispatch: Dispatch<Action>
 }
@@ -17,12 +17,12 @@ export function usePrototype(): PrototypeContextValue {
 
 const IS_TEST = import.meta.env.MODE === 'test'
 /** Simulated network latency for list loads. */
-export const LOAD_MS = IS_TEST ? 0 : 400
+const LOAD_MS = IS_TEST ? 0 : 400
 /** Simulated work time for actions such as "Generate new version". */
 export const ACTION_MS = IS_TEST ? 0 : 1000
 
 export type QueryStatus = 'loading' | 'error' | 'empty' | 'ready'
-export interface SimulatedQuery<T> {
+interface SimulatedQuery<T> {
   status: QueryStatus
   data: T
   retry: () => void

@@ -70,7 +70,7 @@ export function ActivityPage() {
   const counters = [
     ['Evaluated', count('evaluate')],
     ['Resumes generated', count('tailor')],
-    ['Applications executed', count('apply')],
+    ['Apply events', count('apply')],
     ['Failures', count('failure')],
   ] as const
 

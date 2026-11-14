@@ -68,22 +68,6 @@
   font-size: var(--text-xs);
 }
 
-.icon-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.icon-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text-primary);
-}
-
 /* ---------- Panels ---------- */
 .panel {
   background: var(--surface);
@@ -151,13 +135,6 @@
   border-color: rgba(245, 184, 75, 0.35);
   background: var(--warning-soft);
   color: var(--warning);
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
 }
 
 /* ---------- Forms ---------- */
@@ -241,33 +218,12 @@
 .textarea:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: var(--focus-ring);
 }
 
 .input[aria-invalid='true'],
 .textarea[aria-invalid='true'] {
   border-color: var(--danger);
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
-}
-
-.field-grid--3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.field--full {
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 720px) {
-  .field-grid,
-  .field-grid--3 {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Choice chips (checkbox groups) */
@@ -436,24 +392,6 @@
   white-space: nowrap;
 }
 
-.tag__level {
-  height: 22px;
-  padding: 0 4px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  cursor: pointer;
-}
-
-.tag__level:hover,
-.tag__level:focus-visible {
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-}
-
 .tag__remove {
   display: inline-grid;
   place-items: center;
@@ -469,10 +407,6 @@
 .tag__remove:focus-visible {
   color: var(--danger);
   background: var(--danger-soft);
-}
-
-.tag-input__count {
-  margin-left: auto;
 }
 
 /* ---------- Progress ---------- */
@@ -528,10 +462,6 @@
   margin-top: 2px;
 }
 
-.alert--info svg {
-  color: var(--accent);
-}
-
 .alert--warning {
   border-color: rgba(245, 184, 75, 0.35);
 }
@@ -547,14 +477,6 @@
 
 .alert--danger svg {
   color: var(--danger);
-}
-
-.alert--success {
-  border-color: rgba(53, 211, 154, 0.35);
-}
-
-.alert--success svg {
-  color: var(--success);
 }
 
 /* ---------- Dialog ---------- */
@@ -623,12 +545,6 @@ kbd {
 
 .badge svg {
   flex: none;
-}
-
-.badge--live {
-  border-color: rgba(54, 224, 224, 0.4);
-  background: var(--live-soft);
-  color: var(--live);
 }
 
 .prototype-tag {
