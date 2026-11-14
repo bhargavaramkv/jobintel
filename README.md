@@ -19,32 +19,24 @@ candidate profile in your own browser.
 - **Never commit personal data** (resume, profile JSON, backups, notes) to this repository.
   `*.jibak.json` is git-ignored as a safety net.
 
-## UI V2 (Phase 1 prototype)
+## UI V2
 
-**Status: Prototype.** The V2 UI is a dark, command-centre prototype with seven screens, each a hash route:
+A dark UI with six screens, each a hash route. It works on real data: the public job feed collected by the
+GitHub Actions scanner, and a profile and master resume that stay in this browser only.
 
-- **Dashboard** (`#/`)
-- **Onboarding** (`#/onboarding`)
-- **Resumes** (`#/resumes`)
-- **Discovery** (`#/jobs`)
-- **Applications** (`#/applications`)
-- **Activity** (`#/activity`)
-- **Settings** (`#/settings`)
+- **Dashboard** (`#/`): profile readiness, feed stats (open jobs, last scan, jobs above your minimum score), top five matches and the number of tracked jobs.
+- **Setup** (`#/onboarding`): resume, about you, roles, skills, location, salary. Roles and skills are suggested from your resume. Finish saves your profile.
+- **Resumes** (`#/resumes`): upload or replace your master resume (`.tex`) and read its source with line numbers.
+- **Jobs** (`#/jobs`): search the feed by title, company and description, filter by city, work mode and minimum match score, and sort by match or newest. Each job shows how it matches you, with a link to the original posting and a **Track** button. Filters live in the URL (`?q=&city=&mode=&min=&sort=`).
+- **Applications** (`#/applications`): the jobs you track. You set the status yourself (Saved, Applied, Interview, Offer, Rejected) and keep notes. Nothing is sent or checked for you.
+- **Settings** (`#/settings`): edit your profile, the minimum match score, and the preferred cities and work modes that drive matching.
 
-All data is mock data in [`src/prototype/`](src/prototype), held in memory and reset on reload. The agent is
-simulated: nothing is submitted, uploaded or sent, and the header says so.
+Your profile, resume, tracked jobs and preferences are saved in this browser's localStorage and nowhere else.
+Clearing site data deletes them. The job feed is read from `public/data/jobs.json` and validated with the shared
+schema before it is used. Details: [`docs/UI_V2.md`](docs/UI_V2.md).
 
-Switch scenarios with the selector in the header:
-
-- **Demo**: sample profile, jobs, resumes, applications and activity.
-- **New user (empty)**: no profile, jobs or applications, so the empty states show.
-- **Simulate error**: screens show their error state with a retry action.
-
-The header's **Reset** button restores the current scenario's data.
-
-IndexedDB data is untouched in Phase 1. The AI assistant page is no longer in the UI; its domain code remains in
-`src/domain/ai/`.
-
+IndexedDB data from earlier phases is not used by this UI. The AI assistant page is no longer in the UI; its domain
+code remains in `src/domain/ai/`.
 
 ## Development
 

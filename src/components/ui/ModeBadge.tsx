@@ -1,17 +1,18 @@
-import { OctagonAlert, UserCheck, Zap } from 'lucide-react'
-import type { AppMode } from '../../prototype/types'
+import { Building2, HelpCircle, Home, Laptop } from 'lucide-react'
+import type { JobWorkMode } from '../../domain/jobs/feedSchema'
 
 const MODES = {
-  auto: { text: 'Automatic', Icon: Zap, className: 'badge badge--accent' },
-  approval: { text: 'Needs approval', Icon: UserCheck, className: 'badge badge--warning' },
-  blocked: { text: 'Blocked', Icon: OctagonAlert, className: 'badge badge--danger' },
+  onsite: { text: 'Onsite', Icon: Building2 },
+  hybrid: { text: 'Hybrid', Icon: Home },
+  remote: { text: 'Remote', Icon: Laptop },
+  unknown: { text: 'Mode not stated', Icon: HelpCircle },
 } as const
 
-/** Text and icon, never colour alone. */
-export function ModeBadge({ mode }: { mode: AppMode }) {
-  const { text, Icon, className } = MODES[mode]
+/** Work mode as text and icon, never colour alone. */
+export function ModeBadge({ mode }: { mode: JobWorkMode }) {
+  const { text, Icon } = MODES[mode]
   return (
-    <span className={className}>
+    <span className="badge">
       <Icon size={12} aria-hidden="true" />
       {text}
     </span>

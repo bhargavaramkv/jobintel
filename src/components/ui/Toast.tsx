@@ -1,23 +1,23 @@
 import { useEffect } from 'react'
-import { usePrototype } from '../../prototype/usePrototype'
+import { useApp } from '../../app/appContext'
 
 const VISIBLE_MS = 5000
 
 function ToastItem({ id, message }: { id: number; message: string }) {
-  const { dispatch } = usePrototype()
+  const { dismissToast } = useApp()
   useEffect(() => {
-    const t = setTimeout(() => dispatch({ type: 'toast/dismiss', id }), VISIBLE_MS)
+    const t = setTimeout(() => dismissToast(id), VISIBLE_MS)
     return () => clearTimeout(t)
-  }, [dispatch, id])
+  }, [dismissToast, id])
   return <div className="toast">{message}</div>
 }
 
 /** The single aria-live region for confirmations. */
 export function ToastRegion() {
-  const { state } = usePrototype()
+  const { toasts } = useApp()
   return (
     <div className="toast-region" role="status" aria-live="polite">
-      {state.toasts.map((t) => (
+      {toasts.map((t) => (
         <ToastItem key={t.id} id={t.id} message={t.message} />
       ))}
     </div>

@@ -290,48 +290,6 @@
   color: var(--accent-strong);
 }
 
-/* Switch */
-.switch {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  cursor: pointer;
-  font-size: var(--text-sm);
-}
-
-.switch input {
-  appearance: none;
-  position: relative;
-  width: 38px;
-  height: 22px;
-  margin: 0;
-  border-radius: 999px;
-  background: var(--border-strong);
-  cursor: pointer;
-  transition: background var(--dur) var(--ease);
-}
-
-.switch input::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--text-primary);
-  transition: transform var(--dur) var(--ease);
-}
-
-.switch input:checked {
-  background: var(--accent);
-}
-
-.switch input:checked::after {
-  transform: translateX(16px);
-  background: var(--on-accent);
-}
-
 /* ---------- Tag input ---------- */
 .tag-input {
   display: flex;
@@ -536,7 +494,7 @@ kbd {
   color: var(--text-secondary);
 }
 
-/* ---------- Prototype primitives ---------- */
+/* ---------- UI primitives ---------- */
 .badge--danger {
   border-color: rgba(255, 107, 120, 0.4);
   background: var(--danger-soft);
@@ -545,18 +503,6 @@ kbd {
 
 .badge svg {
   flex: none;
-}
-
-.prototype-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-muted);
 }
 
 .score-meter {
@@ -656,22 +602,6 @@ kbd {
   }
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.45;
-  }
-}
-
 .file-input:focus-visible + .btn {
   box-shadow: var(--focus-ring);
-}
-
-.spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }

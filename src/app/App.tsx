@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { RouterProvider } from 'react-router-dom'
-import { PrototypeProvider } from '../prototype/PrototypeProvider'
+import { AppProvider } from './AppProvider'
+import { FeedProvider } from './FeedProvider'
 import { createAppRouter } from './router'
 
 export function App() {
   const [router] = useState(createAppRouter)
   return (
-    <PrototypeProvider>
-      <RouterProvider router={router} />
-    </PrototypeProvider>
+    <AppProvider>
+      <FeedProvider>
+        <RouterProvider router={router} />
+      </FeedProvider>
+    </AppProvider>
   )
 }

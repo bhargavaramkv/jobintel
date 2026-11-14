@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { MASTER_TEX } from '../../prototype/data/resumes'
+import { SAMPLE_TEX } from '../../test/resumeFixture'
 import { inferFromTex } from './infer'
 
 describe('inferFromTex', () => {
   it('reads roles, seniority and skills from the master resume', () => {
-    const r = inferFromTex(MASTER_TEX)
+    const r = inferFromTex(SAMPLE_TEX)
     expect(r.targetRoles).toEqual(['Software Engineer', 'Full-stack Engineer'])
     expect(r.targetSeniority).toEqual(['SDE-2'])
     expect(r.primarySkills).toEqual(expect.arrayContaining(['C#', '.NET', 'React', 'TypeScript', 'Docker']))

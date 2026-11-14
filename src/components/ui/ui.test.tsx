@@ -27,6 +27,14 @@ describe('AsyncView', () => {
     view('empty')
     expect(screen.getByText('Nothing here')).toBeInTheDocument()
   })
+  it('shows the given error text', () => {
+    render(
+      <AsyncView status="error" onRetry={() => {}} emptyTitle="x" errorText="Feed is down">
+        <p>Content</p>
+      </AsyncView>,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Feed is down')
+  })
   it('renders children when ready', () => {
     view('ready')
     expect(screen.getByText('Content')).toBeInTheDocument()
@@ -34,15 +42,16 @@ describe('AsyncView', () => {
 })
 
 describe('ModeBadge', () => {
-  it('names each mode in text', () => {
+  it('names each work mode in text', () => {
     render(
       <>
-        <ModeBadge mode="auto" />
-        <ModeBadge mode="approval" />
-        <ModeBadge mode="blocked" />
+        <ModeBadge mode="onsite" />
+        <ModeBadge mode="hybrid" />
+        <ModeBadge mode="remote" />
+        <ModeBadge mode="unknown" />
       </>,
     )
-    for (const name of ['Automatic', 'Needs approval', 'Blocked']) expect(screen.getByText(name)).toBeInTheDocument()
+    for (const name of ['Onsite', 'Hybrid', 'Remote', 'Mode not stated']) expect(screen.getByText(name)).toBeInTheDocument()
   })
 })
 

@@ -2,18 +2,18 @@
 
 All planned phases (1–9) are implemented. See `docs/SECURITY.md` and `docs/RECOVERY.md`.
 
-## V2 Phase 1: UI revamp (prototype)
+## V2: UI on real data
 
-Status: Prototype (mock data, simulated agent). Design and routes: `docs/UI_V2.md`. Rollback point: git tag `ui-v1-final` (= `a44d84d`).
+Design and routes: `docs/UI_V2.md`. Rollback point: git tag `ui-v1-final` (= `a44d84d`).
 The A-track UI (inbox, sync) is retired from the UI while its domain code is kept.
 
-- [x] Dashboard
-- [x] Onboarding
-- [x] Resumes
-- [x] Discovery
-- [x] Applications
-- [x] Activity
-- [x] Settings
+- [x] Dashboard: readiness, feed stats, top matches, tracked count
+- [x] Setup: resume, about you, roles, skills, location, salary (saved to localStorage)
+- [x] Resumes: master `.tex` upload, replace and source view
+- [x] Jobs: search, city / work mode / minimum score filters, sort, match breakdown, Track
+- [x] Applications: tracked jobs with manual status and notes
+- [x] Settings: profile, minimum match score, preferred cities and work modes
+- [ ] Not built, by design: anything automatic (running a search agent, tailoring resumes, submitting applications, verifying them)
 
 ## AI automation (separate track, A1–A8)
 

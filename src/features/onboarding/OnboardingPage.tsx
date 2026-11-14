@@ -1,19 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useApp } from '../../app/appContext'
 import { PageHeader } from '../../components/layout/PageHeader'
-import { AsyncView } from '../../components/ui/AsyncView'
-import { ChoiceGroup } from '../../components/ui/ChoiceGroup'
-import { TextAreaField, TextField } from '../../components/ui/Field'
-import { TagInput } from '../../components/ui/TagInput'
-import { inferFromTex, type ResumeInference } from '../../domain/resume/infer'
 import { draftFromProfile, profileFromDraft, type DraftErrors, type ProfileDraft } from '../../domain/profile/form'
 import { calculateReadiness } from '../../domain/profile/readiness'
-import { COMPANY_TYPES, CURRENCIES, SENIORITY_OPTIONS, WORK_MODES, type Skill } from '../../domain/profile/schema'
-import { usePrototype, useSimulatedQuery } from '../../prototype/usePrototype'
-import type { AutomationMode } from '../../prototype/types'
+import { createEmptyProfile, type Skill } from '../../domain/profile/schema'
+import { inferFromTex, type ResumeInference } from '../../domain/resume/infer'
+import { AboutFields, CompanyFields, PlaceFields, RoleFields, SalaryFields, SkillFields } from '../profile/ProfileFields'
 import { MasterUpload } from '../resumes/MasterUpload'
 
-const STEPS = ['resume', 'candidate', 'roles', 'skills', 'location', 'salary', 'automation'] as const
+const STEPS = ['resume', 'candidate', 'roles', 'skills', 'location', 'salary'] as const
 type Step = (typeof STEPS)[number]
 
 const STEP_LABEL: Record<Step, string> = {
@@ -23,7 +19,6 @@ const STEP_LABEL: Record<Step, string> = {
   skills: 'Skills',
   location: 'Location',
   salary: 'Salary',
-  automation: 'Automation',
 }
 
 /** Which draft fields belong to which step, so Next only blocks on the visible step's errors. */
@@ -34,15 +29,9 @@ const STEP_FIELDS: Record<Step, Array<keyof ProfileDraft>> = {
   skills: ['primarySkills', 'secondarySkills'],
   location: ['preferredLocations', 'workModes', 'willingToRelocate', 'companyTypes'],
   salary: ['currency', 'compensationMin', 'compensationMax', 'noticePeriod'],
-  automation: [],
 }
 
-const WORK_MODE_OPTIONS = WORK_MODES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))
-const COMPANY_OPTIONS = COMPANY_TYPES.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))
-const SENIORITY_CHOICES = SENIORITY_OPTIONS.map((s) => ({ value: s, label: s }))
-const skillName = (s: Skill) => s.name
 const newSkill = (name: string): Skill => ({ name })
-const text = (s: string) => s
 
 /** Fills roles, seniority and skills from the resume, only where the user has not entered anything yet. */
 function fillFromResume(d: ProfileDraft, inferred: ResumeInference): ProfileDraft {
@@ -55,18 +44,15 @@ function fillFromResume(d: ProfileDraft, inferred: ResumeInference): ProfileDraf
   }
 }
 
-const AUTOMATION_CHOICES: Array<{ value: AutomationMode; title: string; text: string }> = [
-  { value: 'auto', title: 'Auto-submit above my score', text: 'Applies on its own when the score is high and the form has no screening questions.' },
-  { value: 'approval', title: 'Ask me before every application', text: 'Prepares everything, then waits for your approval.' },
-  { value: 'tailor', title: 'Tailor resumes only', text: 'Creates resume versions but never starts an application.' },
-]
-
-function OnboardingForm() {
-  const { state, dispatch } = usePrototype()
+export function OnboardingPage() {
+  const { profile, resume, saveProfile, notify } = useApp()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const [draft, setDraft] = useState<ProfileDraft>(() => draftFromProfile(state.profile))
-  const [mode, setMode] = useState<AutomationMode>(state.settings.automation.mode)
+  const [base] = useState(() => profile ?? createEmptyProfile())
+  const [draft, setDraft] = useState<ProfileDraft>(() => {
+    const d = draftFromProfile(base)
+    return resume ? fillFromResume(d, inferFromTex(resume.tex)) : d
+  })
   const [errors, setErrors] = useState<DraftErrors>({})
 
   const requested = params.get('step') as Step | null
@@ -74,11 +60,12 @@ function OnboardingForm() {
   const index = STEPS.indexOf(step)
   const last = index === STEPS.length - 1
 
-  const result = profileFromDraft(draft, state.profile)
-  const readiness = calculateReadiness(result.ok ? result.profile : state.profile)
+  const result = profileFromDraft(draft, base)
+  const readiness = calculateReadiness(result.ok ? result.profile : profile)
 
   const set = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => setDraft((d) => ({ ...d, [key]: value }))
   const goto = (s: Step) => setParams({ step: s })
+  const fields = { draft, errors, set }
 
   const next = () => {
     if (!result.ok) {
@@ -93,21 +80,20 @@ function OnboardingForm() {
     setErrors({})
     if (last) {
       if (result.ok) {
-        dispatch({ type: 'onboarding/complete', profile: result.profile, mode })
+        saveProfile(result.profile)
+        notify('Profile saved in this browser')
         navigate('/')
       }
       return
     }
-    if (step === 'resume' && state.resumes.master) {
-      const inferred = inferFromTex(state.resumes.master.tex)
-      setDraft((d) => fillFromResume(d, inferred))
-    }
+    if (step === 'resume' && resume) setDraft((d) => fillFromResume(d, inferFromTex(resume.tex)))
     goto(STEPS[index + 1])
   }
 
   return (
     <div className="stack">
-      <ol className="stepper" aria-label="Onboarding steps" tabIndex={0}>
+      <PageHeader title="Setup" subtitle="Six short steps. Your profile is saved in this browser only." />
+      <ol className="stepper" aria-label="Setup steps" tabIndex={0}>
         {STEPS.map((s, i) => (
           <li key={s} className={i < index ? 'stepper__item is-done' : 'stepper__item'} aria-current={s === step ? 'step' : undefined}>
             {i + 1}. {STEP_LABEL[s]}
@@ -131,86 +117,31 @@ function OnboardingForm() {
           {step === 'resume' && (
             <>
               <p className="secondary">
-                {state.resumes.master ? `Current master resume: ${state.resumes.master.name}` : 'Add your master resume as LaTeX. The agent tailors copies of it for each job.'}
+                {resume ? `Current master resume: ${resume.name}` : 'Add your master resume as LaTeX. Roles and skills are suggested from it.'}
               </p>
-              <MasterUpload replace={Boolean(state.resumes.master)} />
+              <MasterUpload replace={Boolean(resume)} />
             </>
           )}
-          {step === 'candidate' && (
-            <>
-              <TextField label="Name" value={draft.displayName} onChange={(v) => set('displayName', v)} error={errors.displayName} />
-              <TextField label="Current title" value={draft.currentTitle} onChange={(v) => set('currentTitle', v)} error={errors.currentTitle} />
-              <TextField label="Current company" value={draft.currentCompany} onChange={(v) => set('currentCompany', v)} error={errors.currentCompany} optional />
-              <TextField label="Years of experience" inputMode="decimal" value={draft.yearsExperience} onChange={(v) => set('yearsExperience', v)} error={errors.yearsExperience} />
-              <TextAreaField label="Professional summary" value={draft.professionalSummary} onChange={(v) => set('professionalSummary', v)} error={errors.professionalSummary} />
-            </>
-          )}
+          {step === 'candidate' && <AboutFields {...fields} />}
           {step === 'roles' && (
             <>
-              <p className="list__meta">{state.resumes.master ? 'Suggested from your resume. Edit anything that is wrong.' : 'Upload your resume in step 1 and these are suggested for you.'}</p>
-              <TagInput label="Target roles" items={draft.targetRoles} getLabel={text} create={text} onChange={(v) => set('targetRoles', v)} error={errors.targetRoles} />
-              <ChoiceGroup legend="Target seniority" options={SENIORITY_CHOICES} selected={draft.targetSeniority} onChange={(v) => set('targetSeniority', v)} />
-              <TagInput label="Excluded title words" items={draft.excludedTitles} getLabel={text} create={text} onChange={(v) => set('excludedTitles', v)} optional />
+              <p className="list__meta">{resume ? 'Suggested from your resume. Edit anything that is wrong.' : 'Upload your resume in step 1 and these are suggested for you.'}</p>
+              <RoleFields {...fields} />
             </>
           )}
           {step === 'skills' && (
             <>
-              <p className="list__meta">{state.resumes.master ? 'Found in your resume. Add or remove skills as needed.' : 'Upload your resume in step 1 and skills are found for you.'}</p>
-              <TagInput label="Primary skills" items={draft.primarySkills} getLabel={skillName} create={newSkill} onChange={(v) => set('primarySkills', v)} error={errors.primarySkills} />
-              <TagInput
-                label="Secondary skills"
-                items={draft.secondarySkills}
-                getLabel={skillName}
-                create={newSkill}
-                onChange={(v) => set('secondarySkills', v)}
-                reserved={draft.primarySkills.map(skillName)}
-                error={errors.secondarySkills}
-                optional
-              />
+              <p className="list__meta">{resume ? 'Found in your resume. Add or remove skills as needed.' : 'Upload your resume in step 1 and skills are found for you.'}</p>
+              <SkillFields {...fields} />
             </>
           )}
           {step === 'location' && (
             <>
-              <TagInput label="Preferred locations" items={draft.preferredLocations} getLabel={text} create={text} onChange={(v) => set('preferredLocations', v)} />
-              <ChoiceGroup legend="Work modes" options={WORK_MODE_OPTIONS} selected={draft.workModes} onChange={(v) => set('workModes', v)} />
-              <label className="row">
-                <input type="checkbox" checked={draft.willingToRelocate} onChange={(e) => set('willingToRelocate', e.target.checked)} />
-                Willing to relocate
-              </label>
-              <ChoiceGroup legend="Company types" options={COMPANY_OPTIONS} selected={draft.companyTypes} onChange={(v) => set('companyTypes', v)} />
+              <PlaceFields {...fields} />
+              <CompanyFields {...fields} />
             </>
           )}
-          {step === 'salary' && (
-            <>
-              <div className="field">
-                <label className="field__label" htmlFor="currency">Currency</label>
-                <select id="currency" className="input" value={draft.currency} onChange={(e) => set('currency', e.target.value as ProfileDraft['currency'])}>
-                  {CURRENCIES.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              <TextField label="Minimum (per year)" inputMode="numeric" value={draft.compensationMin} onChange={(v) => set('compensationMin', v)} error={errors.compensationMin} optional />
-              <TextField label="Maximum (per year)" inputMode="numeric" value={draft.compensationMax} onChange={(v) => set('compensationMax', v)} error={errors.compensationMax} optional />
-              <TextField label="Notice period" value={draft.noticePeriod} onChange={(v) => set('noticePeriod', v)} error={errors.noticePeriod} optional />
-            </>
-          )}
-          {step === 'automation' && (
-            <fieldset className="field">
-              <legend className="field__label">How should the agent apply?</legend>
-              <div className="stack">
-                {AUTOMATION_CHOICES.map((c) => (
-                  <label key={c.value} className="select-row">
-                    <span className="row">
-                      <input type="radio" name="automation" checked={mode === c.value} onChange={() => setMode(c.value)} />
-                      <strong>{c.title}</strong>
-                    </span>
-                    <span className="list__meta">{c.text}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          )}
+          {step === 'salary' && <SalaryFields {...fields} />}
         </div>
       </section>
 
@@ -222,19 +153,6 @@ function OnboardingForm() {
           {last ? 'Finish' : 'Next'}
         </button>
       </div>
-    </div>
-  )
-}
-
-export function OnboardingPage() {
-  const q = useSimulatedQuery((s) => s.profile)
-  const { state } = usePrototype()
-  return (
-    <div className="stack">
-      <PageHeader title="Onboarding" subtitle="Seven short steps. Everything stays in memory in this prototype." />
-      <AsyncView status={q.status} onRetry={q.retry} emptyTitle="Nothing to set up">
-        <OnboardingForm key={state.epoch} />
-      </AsyncView>
     </div>
   )
 }

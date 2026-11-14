@@ -1,11 +1,11 @@
 import { AlertCircle, Upload } from 'lucide-react'
 import { useId, useState, type ChangeEvent } from 'react'
+import { useApp } from '../../app/appContext'
 import { validateTexFile, validateTexUpload } from '../../domain/resume/tex'
-import { usePrototype } from '../../prototype/usePrototype'
 
-/** Reads a .tex file in the browser, validates it and stores it in memory only. */
+/** Reads a .tex file in the browser, validates it and saves it in this browser only. */
 export function MasterUpload({ replace = false }: { replace?: boolean }) {
-  const { dispatch } = usePrototype()
+  const { saveResume, notify } = useApp()
   const id = useId()
   const [error, setError] = useState<string | null>(null)
 
@@ -26,7 +26,8 @@ export function MasterUpload({ replace = false }: { replace?: boolean }) {
       return
     }
     setError(null)
-    dispatch({ type: 'resume/uploadMaster', name: file.name, size: file.size, text })
+    saveResume({ name: file.name, size: file.size, tex: text })
+    notify('Master resume saved in this browser')
   }
 
   return (
@@ -36,7 +37,7 @@ export function MasterUpload({ replace = false }: { replace?: boolean }) {
         <Upload size={14} aria-hidden="true" />
         {replace ? 'Replace master resume (.tex)' : 'Upload master resume (.tex)'}
       </label>
-      <span className="field__hint">Read in your browser and kept in memory only. Nothing is uploaded.</span>
+      <span className="field__hint">Read in your browser and saved in this browser only. Nothing is uploaded.</span>
       {error && (
         <span className="field__error" role="alert">
           <AlertCircle size={13} aria-hidden="true" />

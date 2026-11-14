@@ -1,85 +1,53 @@
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { renderPage } from '../../test/renderPrototype'
-import { Header } from '../../components/layout/Header'
-import { DiscoveryPage } from '../discovery/DiscoveryPage'
+import { backendProfile, renderPage, seedStorage, storedState } from '../../test/appFixture'
 import { SettingsPage } from './SettingsPage'
 
-const opts = { path: '/settings' }
+const page = <SettingsPage />
 
 describe('Settings', () => {
-  it.each(['0', '101'])('rejects a daily limit of %s', async (value) => {
+  it('has only the profile and match preference sections', () => {
+    renderPage(page)
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Match preferences' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Profile' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2)
+    expect(screen.getByLabelText('Minimum match score')).toHaveValue('50')
+  })
+
+  it('loads the saved profile and preferences', () => {
+    seedStorage({ profile: backendProfile(), prefs: { minScore: 65 } })
+    renderPage(page)
+    expect(screen.getByLabelText('Current title')).toHaveValue('Software Engineer')
+    expect(screen.getByLabelText('Minimum match score')).toHaveValue('65')
+    expect(screen.getByRole('checkbox', { name: 'Hybrid' })).toBeChecked()
+    expect(screen.getByText('Bengaluru')).toBeInTheDocument()
+  })
+
+  it('shows inline validation and saves nothing when the profile is invalid', async () => {
     const user = userEvent.setup()
-    renderPage(<SettingsPage />, { ...opts, route: '/settings?section=limits' })
-    const field = screen.getByLabelText(/Daily application limit/)
-    await user.clear(field)
-    await user.type(field, value)
+    renderPage(page)
+    await user.type(screen.getByLabelText(/Years of experience/), 'abc')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/between 1 and 100/)
-    expect(screen.queryByText(/Simulated/)).not.toBeInTheDocument()
+    expect(await screen.findByRole('alert')).toHaveTextContent(/non-negative number/)
+    expect(storedState()).toBeNull()
   })
 
-  it('saves valid limits with a Simulated toast', async () => {
+  it('saves profile edits, preferred work modes and the minimum score together', async () => {
+    seedStorage({ profile: backendProfile(), prefs: { minScore: 65 } })
     const user = userEvent.setup()
-    renderPage(<SettingsPage />, { ...opts, route: '/settings?section=limits' })
-    const field = screen.getByLabelText(/Daily application limit/)
-    await user.clear(field)
-    await user.type(field, '12')
+    renderPage(page)
+    await user.clear(screen.getByLabelText('Current title'))
+    await user.type(screen.getByLabelText('Current title'), 'Staff Engineer')
+    await user.click(screen.getByRole('checkbox', { name: 'Onsite' }))
+    await user.clear(screen.getByLabelText('Minimum match score'))
+    await user.type(screen.getByLabelText('Minimum match score'), '80')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(screen.getByRole('status')).toHaveTextContent(/Simulated: limits settings saved/)
-  })
-
-  it('Reset discards unsaved edits instead of keeping the old draft', async () => {
-    const user = userEvent.setup()
-    renderPage(
-      <>
-        <Header />
-        <SettingsPage />
-      </>,
-      { ...opts, route: '/settings?section=profile' },
-    )
-    const name = screen.getByLabelText(/^Name/)
-    expect(name).toHaveValue('Arjun Rao')
-    await user.clear(name)
-    await user.type(name, 'Someone Else')
-    await user.click(screen.getByRole('button', { name: /Reset/ }))
-    expect(screen.getByLabelText(/^Name/)).toHaveValue('Arjun Rao')
-  })
-
-  it('shows each permission with its implied mode', () => {
-    renderPage(<SettingsPage />, { ...opts, route: '/settings?section=permissions' })
-    expect(screen.getAllByRole('switch')).toHaveLength(4)
-    expect(screen.getByText(/Blocked until you sign in/)).toBeInTheDocument()
-  })
-
-  it('validates automation scores', async () => {
-    const user = userEvent.setup()
-    renderPage(<SettingsPage />, { ...opts, route: '/settings?section=automation' })
-    const field = screen.getByLabelText(/Minimum match score/)
-    await user.clear(field)
-    await user.type(field, '150')
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/between 0 and 100/)
-  })
-
-  it('a newly saved skill raises the affected job score in Discovery', async () => {
-    const user = userEvent.setup()
-    renderPage(
-      <>
-        <SettingsPage />
-        <DiscoveryPage />
-      </>,
-      { route: '/settings?section=profile', path: '/settings' },
-    )
-    const score = () => {
-      const row = screen.getByRole('link', { name: /Kestrel Cloud/ })
-      return Number(/Match score (\d+)/.exec(within(row).getByRole('img').getAttribute('aria-label')!)![1])
-    }
-    const before = score()
-    const input = screen.getAllByRole('textbox', { name: /Primary skills/ })[0]
-    await user.type(input, 'Kubernetes{Enter}')
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    expect(score()).toBeGreaterThan(before)
+    const saved = storedState()!
+    expect(saved.profile?.currentTitle).toBe('Staff Engineer')
+    expect(saved.profile?.workModes).toEqual(['hybrid', 'remote'])
+    expect(saved.prefs.minScore).toBe(80)
+    expect(screen.getByRole('status')).toHaveTextContent('Settings saved in this browser')
   })
 })

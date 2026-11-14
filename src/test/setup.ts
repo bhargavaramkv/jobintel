@@ -5,6 +5,7 @@ import { afterEach } from 'vitest'
 
 afterEach(() => {
   cleanup()
+  if (typeof localStorage !== 'undefined') localStorage.clear()
 })
 
 if (typeof window !== 'undefined') window.scrollTo = () => {}

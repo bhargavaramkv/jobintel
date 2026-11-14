@@ -1,143 +1,76 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { useApp } from '../../app/appContext'
+import { MAX_NOTES, TRACK_STATUSES, TRACK_STATUS_LABEL, type TrackedJob, type TrackStatus } from '../../app/appState'
 import { PageHeader } from '../../components/layout/PageHeader'
-import { AsyncView } from '../../components/ui/AsyncView'
-import { ModeBadge } from '../../components/ui/ModeBadge'
-import { formatStamp } from '../../prototype/clock'
-import { jobById, STATUS_LABEL } from '../../prototype/selectors'
-import { interventionFor } from '../../prototype/store'
-import { usePrototype, useSimulatedQuery } from '../../prototype/usePrototype'
-import { APP_STATUSES, type Application, type AppStatus } from '../../prototype/types'
 
-function Detail({ app }: { app: Application }) {
-  const { state, dispatch } = usePrototype()
-  const job = jobById(state, app.jobId)
-  const intervention = interventionFor(state, app.id)
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+
+function Row({ item }: { item: TrackedJob }) {
+  const { setStatus, setNotes, untrack, notify } = useApp()
+  const label = `${item.title}, ${item.company}`
   return (
-    <div className="stack">
-      <div>
-        <h2>{job?.company}, {job?.title}</h2>
-        <div className="row">
-          <ModeBadge mode={app.mode} />
-          <span className="badge">{STATUS_LABEL[app.status]}</span>
+    <li className="panel panel__body stack">
+      <div className="row row--between">
+        <div>
+          <h2 className="panel__title">{item.title}</h2>
+          <p className="secondary">{item.company}</p>
+          <p className="muted mono">Tracked {formatDate(item.trackedAt)}</p>
         </div>
+        <span className="badge">{TRACK_STATUS_LABEL[item.status]}</span>
+      </div>
+      <div className="field">
+        <label className="field__label" htmlFor={`status-${item.jobId}`}>Status for {label}</label>
+        <select id={`status-${item.jobId}`} className="input" value={item.status} onChange={(e) => setStatus(item.jobId, e.target.value as TrackStatus)}>
+          {TRACK_STATUSES.map((s) => (
+            <option key={s} value={s}>{TRACK_STATUS_LABEL[s]}</option>
+          ))}
+        </select>
+      </div>
+      <div className="field">
+        <label className="field__label" htmlFor={`notes-${item.jobId}`}>Notes for {label}</label>
+        <textarea
+          id={`notes-${item.jobId}`}
+          className="textarea"
+          value={item.notes}
+          maxLength={MAX_NOTES}
+          onChange={(e) => setNotes(item.jobId, e.target.value)}
+        />
       </div>
       <div className="row">
-        {app.status === 'awaiting-approval' && (
-          <>
-            <button type="button" className="btn btn--primary" onClick={() => dispatch({ type: 'app/approve', id: app.id })}>Approve</button>
-            <button type="button" className="btn btn--secondary" onClick={() => dispatch({ type: 'app/reject', id: app.id })}>Reject</button>
-          </>
-        )}
-        {app.status === 'failed' && (
-          <button type="button" className="btn btn--primary" onClick={() => dispatch({ type: 'app/retry', id: app.id })}>Retry</button>
-        )}
-        {app.status === 'blocked' && intervention && (
-          <button type="button" className="btn btn--primary" onClick={() => dispatch({ type: 'event/resolve', id: intervention.id })}>I&apos;ve resolved it</button>
-        )}
+        <Link className="btn btn--secondary btn--sm" to={`/jobs/${encodeURIComponent(item.jobId)}`}>View job</Link>
+        <button
+          type="button"
+          className="btn btn--danger btn--sm"
+          onClick={() => {
+            untrack(item.jobId)
+            notify(`Removed ${item.title} from Applications`)
+          }}
+        >
+          Remove
+        </button>
       </div>
-      {app.blocker && <div className="alert alert--danger" role="note"><p>{app.blocker}</p></div>}
-      {app.failure && <div className="alert alert--warning" role="note"><p>{app.failure}</p></div>}
-      <dl className="kv">
-        <dt className="muted">Resume</dt>
-        <dd>
-          {app.resumeId ? <Link to={`/resumes/${app.resumeId}`}>Resume version v{app.resumeVersion}</Link> : 'Not tailored yet'}
-        </dd>
-        <dt className="muted">Match score</dt>
-        <dd>{app.score ?? 'Not scored'}</dd>
-      </dl>
-      <section aria-labelledby="verify-title" className="panel panel__body">
-        <h3 id="verify-title">Verification</h3>
-        {app.verification ? (
-          <dl className="kv">
-            <dt className="muted">Method</dt>
-            <dd>{app.verification.method}</dd>
-            <dt className="muted">Evidence</dt>
-            <dd>{app.verification.evidence}</dd>
-            <dt className="muted">Verified at</dt>
-            <dd>{formatStamp(app.verification.at)}</dd>
-          </dl>
-        ) : (
-          <p className="secondary">
-            Not verified. {app.notVerifiedReason ?? 'Nothing has been submitted yet.'}
-          </p>
-        )}
-      </section>
-      <section aria-labelledby="history-title">
-        <h3 id="history-title">History</h3>
-        <ol className="timeline" aria-label="Application history">
-          {[...app.history].reverse().map((h, i) => (
-            <li key={i} className="timeline__item">
-              <p><strong>{STATUS_LABEL[h.status]}</strong>: {h.note}</p>
-              <p className="list__meta">{formatStamp(h.at)}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-    </div>
+    </li>
   )
 }
 
 export function ApplicationsPage() {
-  const { appId } = useParams()
-  const [filter, setFilter] = useState<AppStatus | 'all'>('all')
-  const q = useSimulatedQuery((s) => ({ apps: s.applications, jobs: s.jobs }), (d) => d.apps.length === 0)
-  const { apps, jobs } = q.data
-  const selected = appId ? apps.find((a) => a.id === appId) : undefined
-  const company = (a: Application) => jobs.find((j) => j.id === a.jobId)
-
+  const { tracked } = useApp()
   return (
     <div className="stack">
-      <PageHeader title="Applications" subtitle="Everything the agent has queued, sent or stopped on." />
-      <AsyncView
-        status={q.status}
-        onRetry={q.retry}
-        emptyTitle="No applications yet"
-        emptyText="Applications appear here once the agent queues them or you queue one from Discovery."
-        emptyAction={<Link className="btn btn--secondary" to="/jobs">Open Discovery</Link>}
-      >
-        <div className="stack">
-          <div className="field">
-            <label className="field__label" htmlFor="status-filter">Status</label>
-            <select id="status-filter" className="input" value={filter} onChange={(e) => setFilter(e.target.value as AppStatus | 'all')}>
-              <option value="all">All statuses</option>
-              {APP_STATUSES.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-              ))}
-            </select>
-          </div>
-          <div className={selected ? 'split split--detail-only' : 'split split--list-only'}>
-            <div className="split__list stack">
-              {filter !== 'all' && !apps.some((a) => a.status === filter) && <p className="secondary">No applications with this status.</p>}
-              {APP_STATUSES.filter((s) => filter === 'all' || filter === s).map((status) => {
-                const group = apps.filter((a) => a.status === status)
-                if (group.length === 0) return null
-                return (
-                  <section key={status} aria-labelledby={`group-${status}`} className="stack">
-                    <h2 id={`group-${status}`} className="eyebrow">{STATUS_LABEL[status]} ({group.length})</h2>
-                    {group.map((a) => (
-                      <Link key={a.id} className="select-row stack" to={`/applications/${a.id}`} aria-current={a.id === appId ? 'true' : undefined}>
-                        <span className="list__title">{company(a)?.company}, {company(a)?.title}</span>
-                        <span><ModeBadge mode={a.mode} /></span>
-                      </Link>
-                    ))}
-                  </section>
-                )
-              })}
-            </div>
-            <div className="split__detail">
-              {selected ? (
-                <>
-                  <Link className="btn btn--ghost btn--sm" to="/applications">Back to list</Link>
-                  <Detail app={selected} />
-                </>
-              ) : (
-                <p className="secondary">Select an application to see its history.</p>
-              )}
-            </div>
-          </div>
+      <PageHeader title="Applications" subtitle="Jobs you track. You set each status yourself, nothing is sent for you." />
+      {tracked.length === 0 ? (
+        <div className="empty">
+          <p className="empty__title">No tracked jobs yet</p>
+          <p className="empty__text">Open a job and choose Track to keep it here.</p>
+          <Link className="btn btn--secondary" to="/jobs">Browse jobs</Link>
         </div>
-      </AsyncView>
+      ) : (
+        <ul className="plain-list stack" aria-label="Tracked jobs">
+          {tracked.map((t) => (
+            <Row key={t.jobId} item={t} />
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

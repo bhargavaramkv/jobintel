@@ -18,10 +18,9 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'onboarding', lazy: lazyPage(() => import('../features/onboarding/OnboardingPage'), 'OnboardingPage') },
-      { path: 'resumes/:resumeId?', lazy: lazyPage(() => import('../features/resumes/ResumesPage'), 'ResumesPage') },
+      { path: 'resumes', lazy: lazyPage(() => import('../features/resumes/ResumesPage'), 'ResumesPage') },
       { path: 'jobs/:jobId?', lazy: lazyPage(() => import('../features/discovery/DiscoveryPage'), 'DiscoveryPage') },
-      { path: 'applications/:appId?', lazy: lazyPage(() => import('../features/applications/ApplicationsPage'), 'ApplicationsPage') },
-      { path: 'activity', lazy: lazyPage(() => import('../features/activity/ActivityPage'), 'ActivityPage') },
+      { path: 'applications', lazy: lazyPage(() => import('../features/applications/ApplicationsPage'), 'ApplicationsPage') },
       { path: 'settings', lazy: lazyPage(() => import('../features/settings/SettingsPage'), 'SettingsPage') },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

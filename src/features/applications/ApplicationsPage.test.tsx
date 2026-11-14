@@ -1,51 +1,71 @@
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { renderPage } from '../../test/renderPrototype'
+import { trackedFromJob } from '../../app/appState'
+import { renderPage, seedStorage, storedState } from '../../test/appFixture'
+import { makeJob } from '../../test/feedFixture'
 import { ApplicationsPage } from './ApplicationsPage'
 
-const opts = { path: '/applications/:appId?' }
 const page = <ApplicationsPage />
+const tracked = () => [
+  trackedFromJob(makeJob({ sourceId: 'be', title: 'Senior Backend Engineer', company: 'Acme Corp' }), new Date('2026-11-10T00:00:00Z')),
+  trackedFromJob(makeJob({ sourceId: 'fe', title: 'Frontend Engineer', company: 'Globex' }), new Date('2026-11-12T00:00:00Z')),
+]
 
 describe('Applications', () => {
-  it('groups by status with mode badges', () => {
-    renderPage(page, { ...opts, route: '/applications' })
-    expect(screen.getByRole('heading', { name: 'Awaiting approval (2)' })).toBeInTheDocument()
-    expect(screen.getAllByText('Needs approval').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('Blocked', { selector: '.badge' })).toBeInTheDocument()
+  it('shows an empty state that links to Jobs', () => {
+    renderPage(page, { route: '/applications' })
+    expect(screen.getByText('No tracked jobs yet')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Browse jobs' })).toHaveAttribute('href', '/jobs')
   })
 
-  it('approve moves the application to Submitted and adds a history row', async () => {
+  it('lists tracked jobs with title, company, date, status and a link to the job', () => {
+    seedStorage({ tracked: tracked() })
+    renderPage(page, { route: '/applications' })
+    const items = screen.getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent('Senior Backend Engineer')
+    expect(items[0]).toHaveTextContent('Acme Corp')
+    expect(items[0]).toHaveTextContent(/Tracked .*2026/)
+    expect(screen.getAllByText('Saved', { selector: '.badge' })).toHaveLength(2)
+    expect(screen.getAllByRole('link', { name: 'View job' })[0]).toHaveAttribute('href', '/jobs/greenhouse%3Aacme%3Abe')
+  })
+
+  it('a status change is saved to localStorage and survives a reload', async () => {
+    seedStorage({ tracked: tracked() })
     const user = userEvent.setup()
-    renderPage(page, { ...opts, route: '/applications/app-quillpay' })
-    await user.click(screen.getByRole('button', { name: 'Approve' }))
-    expect(screen.getAllByText('Submitted').length).toBeGreaterThan(0)
-    const history = screen.getByRole('list', { name: 'Application history' })
-    expect(within(history).getAllByRole('listitem')[0]).toHaveTextContent(/You approved it/)
-    expect(screen.getByText(/Not verified/)).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(/Simulated/)
+    const first = renderPage(page, { route: '/applications' })
+    await user.selectOptions(screen.getByLabelText('Status for Senior Backend Engineer, Acme Corp'), 'interview')
+    expect(storedState()?.tracked.find((t) => t.jobId.endsWith(':be'))?.status).toBe('interview')
+    expect(screen.getByText('Interview', { selector: '.badge' })).toBeInTheDocument()
+    first.unmount()
+
+    renderPage(page, { route: '/applications' })
+    expect(screen.getByLabelText('Status for Senior Backend Engineer, Acme Corp')).toHaveValue('interview')
   })
 
-  it('Retry moves a failed application back to the queue', async () => {
+  it('offers exactly the five statuses', () => {
+    seedStorage({ tracked: tracked() })
+    renderPage(page, { route: '/applications' })
+    const select = screen.getByLabelText('Status for Frontend Engineer, Globex') as HTMLSelectElement
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Saved', 'Applied', 'Interview', 'Offer', 'Rejected'])
+  })
+
+  it('saves notes', async () => {
+    seedStorage({ tracked: tracked() })
     const user = userEvent.setup()
-    renderPage(page, { ...opts, route: '/applications/app-tessera' })
-    expect(screen.getByText(/Safe to retry/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(screen.getAllByText('Queued').length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    renderPage(page, { route: '/applications' })
+    await user.type(screen.getByLabelText('Notes for Frontend Engineer, Globex'), 'Call recruiter')
+    expect(storedState()?.tracked.find((t) => t.jobId.endsWith(':fe'))?.notes).toBe('Call recruiter')
   })
 
-  it('shows the blocker text and lets the user mark it resolved', async () => {
+  it('removes a job', async () => {
+    seedStorage({ tracked: tracked() })
     const user = userEvent.setup()
-    renderPage(page, { ...opts, route: '/applications/app-lumen' })
-    expect(screen.getByText(/never solves CAPTCHAs/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /I've resolved it/ }))
-    expect(screen.queryByText(/never solves CAPTCHAs/)).not.toBeInTheDocument()
-  })
-
-  it('links a verified application to its resume version and shows evidence', () => {
-    renderPage(page, { ...opts, route: '/applications/app-nimbus' })
-    expect(screen.getByRole('link', { name: 'Resume version v2' })).toHaveAttribute('href', '/resumes/res-nimbus')
-    expect(screen.getByText('Confirmation email')).toBeInTheDocument()
+    renderPage(page, { route: '/applications' })
+    await user.click(screen.getAllByRole('button', { name: 'Remove' })[0])
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(storedState()?.tracked).toHaveLength(1)
+    expect(screen.queryByText('Senior Backend Engineer')).not.toBeInTheDocument()
   })
 })
