@@ -42,10 +42,11 @@ Stable layout only; for specifics (files, symbols, status) ask the graph — thi
 |---|---|
 | App shell, routing | `src/app/` |
 | UI primitives and layout | `src/components/{ui,layout}` |
-| Screens, one folder per feature | `src/features/*` (dashboard, jobs, profile, applications, outreach, referrals, reminders, analytics, shared) |
+| Screens, one folder per feature | `src/features/{dashboard,onboarding,resumes,discovery,applications,activity,settings}` (V2 UI, see `docs/UI_V2.md`) |
+| V2 UI prototype: in-memory mock state, simulated agent | `src/prototype/` (store, selectors, `data/`) |
 | Domain logic (pure, no React) | `src/domain/*` (mirrors the features, plus `match`); `src/domain/jobs/feedSchema.ts` is the Zod feed contract shared with the collector |
 | Persistence (IndexedDB) | `src/storage/` |
-| AI assistant (consented export, validated import, recommendation inbox) | `src/domain/ai/` (pure), `src/features/ai/`; design in `docs/AI_AUTOMATION_ARCHITECTURE.md`, plan in `docs/AI_AUTOMATION_ROADMAP.md` |
+| AI assistant domain (consented export, validated import, recommendation inbox; UI retired from V2) | `src/domain/ai/` (pure); design in `docs/AI_AUTOMATION_ARCHITECTURE.md`, plan in `docs/AI_AUTOMATION_ROADMAP.md` |
 | Job collector (Greenhouse/Lever/Ashby, runs in Actions) | `collector/`; writes `public/data/jobs.json` |
 | CI | `.github/workflows/` (`pages.yml` deploy, `scan.yml` job scan, `graph.yml` graph refresh) |
 | Tests | `*.test.ts(x)` beside the code, plus `e2e/` (Vitest + Playwright) |

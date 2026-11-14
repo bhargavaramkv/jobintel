@@ -6,3 +6,5 @@ import { afterEach } from 'vitest'
 afterEach(() => {
   cleanup()
 })
+
+if (typeof window !== 'undefined') window.scrollTo = () => {}

@@ -18,7 +18,7 @@ html {
 body {
   min-height: 100vh;
   background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(22, 184, 255, 0.05), transparent 60%),
+    radial-gradient(1200px 600px at 85% -10%, rgba(34, 184, 255, 0.06), transparent 60%),
     var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
@@ -70,7 +70,7 @@ button {
 }
 
 ::selection {
-  background: rgba(22, 184, 255, 0.3);
+  background: rgba(34, 184, 255, 0.3);
 }
 
 .sr-only {

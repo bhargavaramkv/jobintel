@@ -7,19 +7,22 @@ import { DashboardPage } from '../features/dashboard/DashboardPage'
  * which cannot rewrite unknown paths to index.html.
  * The dashboard ships in the main bundle; other screens load on first visit.
  */
+const lazyPage = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => async () => ({
+  Component: (await load())[name],
+})
+
 export const routes: RouteObject[] = [
   {
     path: '/',
     element: <AppShell />,
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: 'jobs', lazy: async () => ({ Component: (await import('../features/jobs/JobsPage')).JobsPage }) },
-      { path: 'assistant', lazy: async () => ({ Component: (await import('../features/ai/AssistantPage')).AssistantPage }) },
-      { path: 'referrals', lazy: async () => ({ Component: (await import('../features/referrals/ReferralsPage')).ReferralsPage }) },
-      { path: 'outreach', lazy: async () => ({ Component: (await import('../features/outreach/OutreachPage')).OutreachPage }) },
-      { path: 'applications', lazy: async () => ({ Component: (await import('../features/applications/ApplicationsPage')).ApplicationsPage }) },
-      { path: 'analytics', lazy: async () => ({ Component: (await import('../features/analytics/AnalyticsPage')).AnalyticsPage }) },
-      { path: 'profile', lazy: async () => ({ Component: (await import('../features/profile/ProfilePage')).ProfilePage }) },
+      { path: 'onboarding', lazy: lazyPage(() => import('../features/onboarding/OnboardingPage'), 'OnboardingPage') },
+      { path: 'resumes/:resumeId?', lazy: lazyPage(() => import('../features/resumes/ResumesPage'), 'ResumesPage') },
+      { path: 'jobs/:jobId?', lazy: lazyPage(() => import('../features/discovery/DiscoveryPage'), 'DiscoveryPage') },
+      { path: 'applications/:appId?', lazy: lazyPage(() => import('../features/applications/ApplicationsPage'), 'ApplicationsPage') },
+      { path: 'activity', lazy: lazyPage(() => import('../features/activity/ActivityPage'), 'ActivityPage') },
+      { path: 'settings', lazy: lazyPage(() => import('../features/settings/SettingsPage'), 'SettingsPage') },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

@@ -1,42 +1,19 @@
-import {
-  Briefcase,
-  ChartLine,
-  LayoutDashboard,
-  Radar,
-  Send,
-  Sparkles,
-  UserRound,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { Activity, FileText, LayoutDashboard, Radar, Rocket, Send, Settings, type LucideIcon } from 'lucide-react'
 
-export type NavItem =
-  | { id: string; label: string; shortLabel: string; icon: LucideIcon; kind: 'active'; path: string }
-  | { id: string; label: string; shortLabel: string; icon: LucideIcon; kind: 'planned'; phase: number }
-
-/** Planned entries never route anywhere. */
-export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', icon: LayoutDashboard, kind: 'active', path: '/' },
-  { id: 'assistant', label: 'AI Assistant', shortLabel: 'AI', icon: Sparkles, kind: 'active', path: '/assistant' },
-  { id: 'discovery', label: 'Job Discovery', shortLabel: 'Jobs', icon: Radar, kind: 'active', path: '/jobs' },
-  { id: 'referrals', label: 'Referrals', shortLabel: 'Refs', icon: Users, kind: 'active', path: '/referrals' },
-  { id: 'outreach', label: 'Outreach', shortLabel: 'Reach', icon: Send, kind: 'active', path: '/outreach' },
-  { id: 'applications', label: 'Applications', shortLabel: 'Apps', icon: Briefcase, kind: 'active', path: '/applications' },
-  { id: 'analytics', label: 'Analytics', shortLabel: 'Stats', icon: ChartLine, kind: 'active', path: '/analytics' },
-  { id: 'profile', label: 'Profile & Preferences', shortLabel: 'Profile', icon: UserRound, kind: 'active', path: '/profile' },
-]
-
-export const PROFILE_SECTIONS = [
-  { id: 'identity', label: 'Professional identity' },
-  { id: 'skills', label: 'Technical skills' },
-  { id: 'roles', label: 'Target roles' },
-  { id: 'location', label: 'Location & work' },
-  { id: 'company', label: 'Company & compensation' },
-  { id: 'data', label: 'Data & privacy' },
-] as const
-
-export type ProfileSectionId = (typeof PROFILE_SECTIONS)[number]['id']
-
-export function isProfileSection(value: string | null | undefined): value is ProfileSectionId {
-  return PROFILE_SECTIONS.some((s) => s.id === value)
+export interface NavItem {
+  id: string
+  label: string
+  shortLabel: string
+  path: string
+  icon: LucideIcon
 }
+
+export const NAV_ITEMS: readonly NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', shortLabel: 'Home', path: '/', icon: LayoutDashboard },
+  { id: 'onboarding', label: 'Onboarding', shortLabel: 'Setup', path: '/onboarding', icon: Rocket },
+  { id: 'resumes', label: 'Resumes', shortLabel: 'Resumes', path: '/resumes', icon: FileText },
+  { id: 'jobs', label: 'Discovery', shortLabel: 'Jobs', path: '/jobs', icon: Radar },
+  { id: 'applications', label: 'Applications', shortLabel: 'Apply', path: '/applications', icon: Send },
+  { id: 'activity', label: 'Activity', shortLabel: 'Activity', path: '/activity', icon: Activity },
+  { id: 'settings', label: 'Settings', shortLabel: 'Settings', path: '/settings', icon: Settings },
+]

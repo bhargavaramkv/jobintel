@@ -19,102 +19,32 @@ candidate profile in your own browser.
 - **Never commit personal data** (resume, profile JSON, backups, notes) to this repository.
   `*.jibak.json` is git-ignored as a safety net.
 
-## Features (Phase 1)
+## UI V2 (Phase 1 prototype)
 
-- A dark, blue/cyan command-centre shell. Desktop has an icon rail, mobile has a bottom navigation
-  bar, and `Ctrl/⌘+K` opens a command palette.
-- A dashboard with honest empty states and zero counts. It contains no sample jobs or fake activity.
-- Profile & Preferences, with sections for identity, skills (with proficiency), target roles,
-  location and work mode, and company and compensation. Every field is optional.
-- Validation: inline errors, and duplicate tags are rejected regardless of case. A skill cannot be
-  both primary and secondary.
-- Explicit save with saved/unsaved status, a `Ctrl/⌘+S` shortcut, and a warning before you leave
-  with unsaved edits.
-- A deterministic **profile readiness** score. It is a fixed weighted checklist, and you can open
-  the breakdown on the dashboard. The weights are in
-  [`src/domain/profile/readiness.ts`](src/domain/profile/readiness.ts).
-- Encrypted export and import of backups, and a clear-local-data action that requires typed
-  confirmation.
+**Status: Prototype.** The V2 UI is a dark, command-centre prototype with seven screens, each a hash route:
 
-## Job discovery (Phase 2)
+- **Dashboard** (`#/`)
+- **Onboarding** (`#/onboarding`)
+- **Resumes** (`#/resumes`)
+- **Discovery** (`#/jobs`)
+- **Applications** (`#/applications`)
+- **Activity** (`#/activity`)
+- **Settings** (`#/settings`)
 
-`collector/` runs in GitHub Actions three times a day. It reads the public posting APIs of the
-boards in [`collector/sources.json`](collector/sources.json) (Greenhouse, Lever, Ashby), keeps
-engineering roles in Bengaluru and Hyderabad (the `cities` list in `collector/config.json`), and writes `public/data/jobs.json`. The app fetches that static
-file from the same origin and filters it in the browser. Your profile is never sent anywhere, and
-the feed contains only public posting facts. Note that the list of tracked companies is public.
+All data is mock data in [`src/prototype/`](src/prototype), held in memory and reset on reload. The agent is
+simulated: nothing is submitted, uploaded or sent, and the header says so.
 
-- Run a scan locally: `node collector/run.ts` (Node 24+)
-- Check a board before adding it: `node collector/probe.ts greenhouse:<board> lever:<site> ashby:<name>`
-- Run a scan from GitHub: Actions → *Job discovery scan* → *Run workflow*
+Switch scenarios with the selector in the header:
 
-## Matching (Phase 3)
+- **Demo**: sample profile, jobs, resumes, applications and activity.
+- **New user (empty)**: no profile, jobs or applications, so the empty states show.
+- **Simulate error**: screens show their error state with a retry action.
 
-Every job gets an explained **fit score** computed in your browser: technical skills (30%), experience (20%),
-role alignment (20%), location and work mode (10%), seniority (10%) and other requirements (10%). Open
-*Details* on a job to see each factor with what matched and what's missing. Factors without data are left out
-rather than counted as a match, and the card says how much of the score had evidence. Shortlist the jobs you
-want to pursue; they move to the *Shortlisted* tab.
+The header's **Reset** button restores the current scenario's data.
 
-## Referral leads (Phase 4)
+IndexedDB data is untouched in Phase 1. The AI assistant page is no longer in the UI; its domain code remains in
+`src/domain/ai/`.
 
-*Referrals* lists the companies in your pipeline and helps you record people who could refer you. You find
-them yourself (the app only opens public searches in a new tab), and every lead needs the link where you found
-it. JobIntel never lets you type a relationship as a claim: "former colleague" appears only when the lead's
-companies overlap your own past employers, "alumni" only when colleges overlap, and each label shows whether it
-is **verified** (you confirmed it) or **inferred**. There are no email or phone fields.
-
-## Outreach (Phase 5)
-
-*Outreach* drafts LinkedIn notes, LinkedIn messages and emails for a referral lead, in three tones. The approach
-follows the evidence: a referral is asked for only when you confirmed you know the person or worked together;
-otherwise the draft asks for advice. Every draft lists the facts it used, and you can edit it. JobIntel never
-sends anything: copy the text, send it yourself, then press *I sent it* to log it. Follow-ups are suggested at
-most twice, a week apart, and stop when the person replies.
-
-## Application tracking (Phase 6)
-
-*Applications* follows every job you pursue from shortlist through referral, application, interviews and
-outcome. Each stage change is kept in a history. Record next actions, follow-up dates, interviews, the resume
-version you used, linked referral contacts and feedback. You can add jobs you found elsewhere, and JobIntel
-stops you from tracking the same company and title twice by accident.
-
-## Automation and reminders (Phase 7)
-
-Scans run three times a day in GitHub Actions. *Job Discovery → Sources* shows source health, the last 20 scans
-and roughly when the next one runs. If a scan or deploy fails, the workflow opens a `scan-failure` issue (GitHub
-notifies you) and the last good feed stays online; the next good run closes the issue. The dashboard's *Today*
-panel lists interviews and follow-ups due, and you can turn on a once-a-day browser reminder that works while
-JobIntel is open in a tab.
-
-## Analytics (Phase 8)
-
-*Analytics* turns your own records into a funnel, outreach and referral counts, a by-company table, time to
-response and repeated skill gaps. Every number opens to the records behind it, small samples are flagged, and
-recommendations show their evidence. Comparisons between groups are labelled as correlations. Nothing leaves the
-browser unless you press *Export CSV*.
-
-## Applied tracking and feedback
-
-On each job you can **Mark applied**, mark it **Not interested** (with optional reasons), and add a
-**private note**. These records live in IndexedDB next to your profile and are included in
-encrypted backups. JobIntel learns from them in the browser and re-ranks every new scan: it hides
-companies you rejected, demotes seniority levels and role types you passed on, and promotes roles
-like the ones you applied to. Each card explains why it was moved.
-
-## AI assistant (A1)
-
-The *AI Assistant* page turns your own records into recommendations, without a server or an API key. You choose
-what to share, **preview the exact file**, tick a consent box, and give the file to Claude yourself (a chat on
-claude.ai, or `claude -p`, using your own subscription). You then import Claude's answer: it is checked against a
-strict, versioned format, shown to you with anything rejected listed, and added to a **recommendation inbox** as
-*Generated*. Each recommendation carries its evidence and confidence, and changes a job record only when you
-**Accept** it; accepting re-checks the record as it is now. Nothing is ever sent or submitted automatically.
-
-Name, employers, schools, compensation, private notes and lead names are off by default, and message text, lead
-links and files are never exported. See [`docs/AI_AUTOMATION_ARCHITECTURE.md`](docs/AI_AUTOMATION_ARCHITECTURE.md)
-for the design and privacy boundaries, and [`docs/AI_AUTOMATION_ROADMAP.md`](docs/AI_AUTOMATION_ROADMAP.md) for what
-comes next.
 
 ## Development
 

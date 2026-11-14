@@ -1,375 +1,208 @@
-import {
-  Activity,
-  ArrowRight,
-  CircleCheck,
-  CircleDashed,
-  Flag,
-  Radar,
-  ShieldCheck,
-  type LucideIcon,
-  Bookmark,
-  Users,
-  CalendarClock,
-} from 'lucide-react'
-import { useMemo } from 'react'
+import { Pause, Play, Square } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useNow } from '../../components/layout/useNow'
-import { applyFilters, DEFAULT_FILTERS, feedFreshness, NEW_WINDOW_DAYS, newJobs, preferencesFromProfile, relativeTime, sortJobs } from '../../domain/jobs/filters'
-import { calculateReadiness } from '../../domain/profile/readiness'
-import { JobCard } from '../jobs/JobCard'
-import { useJobActions } from '../jobs/useJobActions'
-import { useContacts } from '../referrals/useContacts'
-import { useOutreach } from '../outreach/outreachContext'
-import { followUpState } from '../../domain/outreach/drafts'
-import { threadOf } from '../../domain/outreach/messages'
-import { dueApplicationFollowUps } from '../../domain/applications/pipeline'
-import { assessJob, hasSignals, targetLevels } from '../../domain/jobs/feedback'
-import { localDate, STAGE_LABEL, stageOf } from '../../domain/jobs/actions'
-import { matchJob, matchRank } from '../../domain/match/score'
-import { useJobFeed } from '../jobs/jobFeed'
-import { useProfile } from '../profile/useProfile'
-import { greetingFor } from './greeting'
-import { NEXT_MILESTONE, ROADMAP } from './roadmap'
-import { RemindersPanel } from '../reminders/RemindersPanel'
-import { AiDashboardPanel } from '../ai/AiDashboardPanel'
-import './dashboard.css'
+import { PageHeader } from '../../components/layout/PageHeader'
+import { AsyncView } from '../../components/ui/AsyncView'
+import { ModeBadge } from '../../components/ui/ModeBadge'
+import { formatStamp, formatTime } from '../../prototype/clock'
+import { RUN_SCRIPT } from '../../prototype/data'
+import { interventionFor } from '../../prototype/store'
+import { jobById, needsAttention, submittedToday } from '../../prototype/selectors'
+import { useSimulatedQuery, usePrototype } from '../../prototype/usePrototype'
+import type { Application } from '../../prototype/types'
 
-interface Kpi {
-  label: string
-  value: number | null
-  icon: LucideIcon
-  hint: string
-}
+const RUN_TEXT = { idle: 'Agent idle', running: 'Agent running', paused: 'Agent paused' } as const
 
-
-export function DashboardPage({ now: nowOverride }: { now?: Date }) {
-  const now = useNow(nowOverride)
-  const { state, profile } = useProfile()
-  const readiness = calculateReadiness(profile)
-  const name = profile?.displayName?.split(/\s+/)[0]
-  const loading = state.status === 'loading'
-  const { state: feedState } = useJobFeed()
-  const feed = feedState.status === 'ready' ? feedState.feed : null
-  const prefs = useMemo(() => preferencesFromProfile(profile), [profile])
-  const { actions, learned } = useJobActions()
-  const targets = useMemo(() => targetLevels(profile?.targetSeniority ?? []), [profile])
-  const ranked = hasSignals(learned, targets)
-  // Jobs still to review: fit preferences, not yet decided, not from a hidden company.
-  // Ranked by what was learned from past decisions, newest first within equal rank.
-  const matching = useMemo(() => {
-    if (!feed) return []
-    const pool = applyFilters(feed.jobs, DEFAULT_FILTERS, prefs, now).filter(
-      (j) => !actions.get(j.id)?.decision && !stageOf(actions.get(j.id)) && !assessJob(j, learned).hidden,
-    )
-    const newest = sortJobs(pool, 'newest')
-    const canMatch = !!profile && profile.primarySkills.length + profile.secondarySkills.length > 0
-    if (!ranked && !canMatch) return newest
-    const score = new Map(newest.map((j) => [j.id, assessJob(j, learned, targets).score]))
-    const fit = new Map(canMatch ? newest.map((j) => [j.id, matchRank(matchJob(j, profile, targets))]) : [])
-    return newest.sort((a, b) => (fit.get(b.id) ?? 0) - (fit.get(a.id) ?? 0) || score.get(b.id)! - score.get(a.id)!)
-  }, [feed, prefs, now, actions, learned, targets, ranked, profile])
-  const { contacts } = useContacts()
-  const { messages } = useOutreach()
-  // Recent activity from your own records: stage changes and logged messages.
-  const activity = useMemo(() => {
-    const events: Array<{ key: string; at: string; text: string }> = []
-    for (const a of actions.values())
-      (a.history ?? []).forEach((h, i) =>
-        events.push({ key: `${a.jobId}-${i}`, at: h.at, text: `${STAGE_LABEL[h.stage]}: ${a.snapshot.title} at ${a.snapshot.company}` }),
-      )
-    for (const m of messages.values())
-      if (m.status === 'sent' && m.sentOn)
-        events.push({ key: m.id, at: m.sentOn, text: `Message sent to ${contacts.get(m.contactId)?.name ?? 'a removed lead'}` })
-    return events.sort((x, y) => y.at.localeCompare(x.at)).slice(0, 8)
-  }, [actions, messages, contacts])
-  const followUpsDue = useMemo(() => {
-    const day = localDate(now)
-    return [...contacts.values()].filter((c) => {
-      if (c.status === 'dismissed') return false
-      const t = threadOf(messages.values(), c.id)
-      const f = followUpState(t.sent, t.replied)
-      return !!f.dueOn && f.dueOn <= day
-    }).length + dueApplicationFollowUps(actions.values(), day).length
-  }, [contacts, messages, actions, now])
-  const leadCount = useMemo(() => [...contacts.values()].filter((c) => c.status !== 'dismissed').length, [contacts])
-  const appliedCount = useMemo(() => [...actions.values()].filter((a) => a.decision === 'applied').length, [actions])
-  const fresh = useMemo(() => newJobs(matching, NEW_WINDOW_DAYS, now), [matching, now])
-  const freshness = feedFreshness(feed?.lastSuccessfulScanAt, now)
-  const kpis: Kpi[] = [
-    {
-      label: 'New Jobs',
-      value: feed ? fresh.length : feedState.status === 'loading' ? null : 0,
-      icon: Radar,
-      hint: feed ? `First seen in the last ${NEW_WINDOW_DAYS} days`+ (prefs.active ? ' · your preferences' : '') : 'Waiting for the first scan',
-    },
-    {
-      label: 'Applied',
-      value: appliedCount,
-      icon: Bookmark,
-      hint: appliedCount ? 'Marked by you in this browser' : 'Mark jobs as applied to count them',
-    },
-    {
-      label: 'Referral Leads',
-      value: leadCount,
-      icon: Users,
-      hint: leadCount ? 'Recorded by you, with sources' : 'Add leads in Referrals',
-    },
-    {
-      label: 'Follow-ups',
-      value: followUpsDue,
-      icon: CalendarClock,
-      hint: followUpsDue ? 'Due today or overdue' : 'None due',
-    },
-  ]
-
+function Hero() {
+  const { state, dispatch } = usePrototype()
+  const { run } = state
+  const current = run.status === 'idle' ? null : RUN_SCRIPT[Math.min(run.step, run.total - 1)]
+  const pct = Math.round((run.step / run.total) * 100)
+  const done = run.status === 'idle' && run.step >= run.total
+  const stepText = current
+    ? `${current.title}: step ${Math.min(run.step + 1, run.total)} of ${run.total}`
+    : done
+      ? `Run complete: ${run.total} of ${run.total} steps`
+      : 'Ready to start'
   return (
-    <div className="dashboard">
-      <section className="hero" aria-labelledby="dash-title">
-        <div>
-          <p className="eyebrow">Command center</p>
-          <h1 id="dash-title" className="hero__title">
-            {greetingFor(now)}
-            {name ? `, ${name}` : ''}
-          </h1>
-          <p className="hero__subtitle">Your job hunt command center</p>
+    <section className="hero" aria-label="Agent">
+      <div className="hero__top">
+        <span className="orb" data-state={run.status} aria-hidden="true" />
+        <div className="hero__status">
+          <h2 className="hero__title">{RUN_TEXT[run.status]}</h2>
+          <p className="secondary">{stepText}</p>
+          <p className="muted mono">Last run: {run.lastRunAt ? formatStamp(run.lastRunAt) : 'never'}</p>
         </div>
-        <div className="hero__actions">
-          {freshness.kind === 'none' ? (
-            <span className="badge badge--warning">
-              <span className="dot" aria-hidden="true" />
-              {feedState.status === 'loading' ? 'Loading job feed…' : 'Waiting for the first discovery scan'}
-            </span>
-          ) : (
-            <span className={freshness.kind === 'stale' ? 'badge badge--warning' : 'badge badge--success'}>
-              <span className="dot" aria-hidden="true" />
-              Discovery {freshness.kind === 'stale' ? 'feed is stale' : 'active'} · last scan {relativeTime(freshness.at, now)}
-            </span>
+        <div className="row">
+          {run.status === 'idle' && (
+            <button type="button" className="btn btn--primary" disabled={!state.onboarded} onClick={() => dispatch({ type: 'agent/start' })}>
+              <Play size={14} aria-hidden="true" />
+              Start
+            </button>
           )}
-          {!loading && (
-            <Link to="/profile" className="btn btn--primary">
-              {readiness.complete ? 'Edit profile' : 'Complete profile'}
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
+          {run.status === 'running' && (
+            <button type="button" className="btn btn--secondary" onClick={() => dispatch({ type: 'agent/pause' })}>
+              <Pause size={14} aria-hidden="true" />
+              Pause
+            </button>
+          )}
+          {run.status === 'paused' && (
+            <button type="button" className="btn btn--primary" onClick={() => dispatch({ type: 'agent/resume' })}>
+              <Play size={14} aria-hidden="true" />
+              Resume
+            </button>
+          )}
+          {run.status !== 'idle' && (
+            <button type="button" className="btn btn--ghost" onClick={() => dispatch({ type: 'agent/stop' })}>
+              <Square size={14} aria-hidden="true" />
+              Stop
+            </button>
           )}
         </div>
-      </section>
-
-      {state.status === 'error' && (
-        <div className="alert alert--danger" role="alert">
-          <ShieldCheck size={16} aria-hidden="true" />
-          <span>
-            {state.message} <Link to="/profile?section=data">Open data settings</Link>
-          </span>
-        </div>
-      )}
-
-      <section aria-label="Key indicators" className="kpis">
-        {kpis.map((k) => {
-          const Icon = k.icon
-          return (
-            <div key={k.label} className="kpi">
-              <div className="kpi__head">
-                <span className="kpi__label">{k.label}</span>
-                <Icon size={16} aria-hidden="true" className="kpi__icon" />
-              </div>
-              <span className="kpi__value">{k.value ?? '–'}</span>
-              <span className="kpi__hint mono">{k.hint}</span>
-            </div>
-          )
-        })}
-      </section>
-
-      <div className="dashboard__grid">
-        <section className="panel feed" aria-labelledby="feed-title">
-          <div className="panel__header">
-            <div>
-              <h2 id="feed-title" className="panel__title">
-                Job Feed
-              </h2>
-              <p className="panel__subtitle">
-                {ranked
-                  ? 'Ranked by your target seniority and applied / not-interested history'
-                  : prefs.active
-                    ? 'Newest openings that fit your location and work preferences'
-                    : 'Newest openings'}
-              </p>
-            </div>
-            <span className="badge">{matching.length} jobs</span>
-          </div>
-          {matching.length > 0 ? (
-            <div className="panel__body feed__list">
-              {matching.slice(0, 5).map((j) => (
-                <JobCard
-                  key={j.id}
-                  job={j}
-                  record={actions.get(j.id)}
-                  now={now}
-                  isNew={fresh.some((f) => f.id === j.id)}
-                  assessment={ranked ? assessJob(j, learned, targets) : undefined}
-                  match={profile ? matchJob(j, profile, targets) : undefined}
-                />
-              ))}
-              <Link to="/jobs" className="btn btn--secondary feed__all">
-                Review all {matching.length} in Job Discovery
-                <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-          ) : (
-            <div className="empty">
-              <RadarGraphic />
-              <h3 className="empty__title">
-                {feedState.status === 'loading'
-                  ? 'Loading the job feed…'
-                  : feed
-                    ? 'No open jobs fit your preferences right now'
-                    : 'No discovery scan has run yet'}
-              </h3>
-              <p className="empty__text">
-                {feed
-                  ? 'New openings are collected a few times a day. Widen your locations or work modes to see more.'
-                  : 'Jobs appear after the scheduled collector publishes its first feed.'}
-              </p>
-              <Link to={feed ? '/jobs' : '/profile'} className="btn btn--secondary">
-                {feed ? 'Browse all jobs' : 'Review candidate profile'}
-              </Link>
-            </div>
-          )}
-        </section>
-
-        <aside className="rail-col" aria-label="Setup and milestones">
-          <RemindersPanel now={now} />
-          <AiDashboardPanel now={now} />
-          <section className="panel" aria-labelledby="setup-title">
-            <div className="panel__header">
-              <h2 id="setup-title" className="panel__title">
-                Today's Setup
-              </h2>
-              <span className="mono muted">
-                {readiness.groups.filter((g) => g.complete).length}/{readiness.groups.length}
-              </span>
-            </div>
-            <ul className="checklist panel__body">
-              {readiness.groups.map((g) => (
-                <li key={g.id}>
-                  <Link to={`/profile?section=${g.section}`} className="checklist__item">
-                    {g.complete ? (
-                      <CircleCheck size={18} className="checklist__done" aria-hidden="true" />
-                    ) : (
-                      <CircleDashed size={18} className="muted" aria-hidden="true" />
-                    )}
-                    <span>{g.label}</span>
-                    <span className="sr-only">{g.complete ? ' (complete)' : ' (incomplete)'}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="panel" aria-labelledby="readiness-title">
-            <div className="panel__header">
-              <h2 id="readiness-title" className="panel__title">
-                Profile readiness
-              </h2>
-              <span className="readiness__score" data-testid="readiness-score">
-                {readiness.score}%
-              </span>
-            </div>
-            <div className="panel__body readiness">
-              <div
-                className="progress"
-                role="progressbar"
-                aria-labelledby="readiness-title"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={readiness.score}
-              >
-                <div className="progress__bar" style={{ width: `${readiness.score}%` }} />
-              </div>
-              <details className="readiness__details">
-                <summary>How this is calculated</summary>
-                <p className="field__hint">
-                  A fixed weighted checklist. Optional preferences (company, compensation, notice period) don't count.
-                </p>
-                <ul>
-                  {readiness.rules.map((r) => (
-                    <li key={r.id}>
-                      <span>{r.label}</span>
-                      <span className="mono">
-                        {Math.round(r.earned)}/{r.weight}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </div>
-          </section>
-
-          <section className="panel" aria-labelledby="milestone-title">
-            <div className="panel__header">
-              <h2 id="milestone-title" className="panel__title">
-                Next milestone
-              </h2>
-              <Flag size={16} className="muted" aria-hidden="true" />
-            </div>
-            <div className="panel__body milestone">
-              {NEXT_MILESTONE ? (
-                <p>
-                  <strong>
-                    Phase {NEXT_MILESTONE.phase} · {NEXT_MILESTONE.label}.
-                  </strong>{' '}
-                  {NEXT_MILESTONE.blurb}
-                </p>
-              ) : (
-                <p>All planned phases are available.</p>
-              )}
-              <ol className="roadmap">
-                {ROADMAP.map((r) => (
-                  <li key={r.phase} className={r.done ? 'is-done' : undefined}>
-                    <span className="mono">P{r.phase}</span>
-                    <span>{r.label}</span>
-                    {r.done && <span className="sr-only">(available)</span>}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </section>
-        </aside>
       </div>
-
-      <section className="panel activity" aria-labelledby="activity-title">
-        <div className="panel__header">
-          <h2 id="activity-title" className="panel__title">
-            Activity
-          </h2>
-          <Activity size={16} className="muted" aria-hidden="true" />
-        </div>
-        {activity.length === 0 ? (
-          <p className="panel__body secondary">Activity will appear here as you shortlist, apply and log outreach.</p>
-        ) : (
-          <ul className="panel__body activity__list">
-            {activity.map((e) => (
-              <li key={e.key}>
-                <span className="mono muted">{e.at.slice(0, 10)}</span> {e.text}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+      <div className="progress" role="progressbar" aria-label="Run progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+        <div className="progress__bar" style={{ width: `${pct}%` }} />
+      </div>
+      {!state.onboarded && <p className="muted">Finish onboarding to start the agent.</p>}
+    </section>
   )
 }
 
-function RadarGraphic() {
+function AttentionItem({ app }: { app: Application }) {
+  const { state, dispatch } = usePrototype()
+  const job = jobById(state, app.jobId)
+  const intervention = interventionFor(state, app.id)
+  const detail = app.blocker ?? app.failure ?? 'Ready for your review'
   return (
-    <svg className="radar" width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">
-      <circle cx="48" cy="48" r="44" fill="none" stroke="var(--border-strong)" />
-      <circle cx="48" cy="48" r="30" fill="none" stroke="var(--border)" />
-      <circle cx="48" cy="48" r="16" fill="none" stroke="var(--border)" />
-      <line x1="48" y1="4" x2="48" y2="92" stroke="var(--border)" />
-      <line x1="4" y1="48" x2="92" y2="48" stroke="var(--border)" />
-      <path d="M48 48 L48 4 A44 44 0 0 1 86 26 Z" fill="var(--accent-soft)" />
-      <line x1="48" y1="48" x2="86" y2="26" stroke="var(--accent)" strokeWidth="1.5" />
-      <circle cx="48" cy="48" r="3" fill="var(--accent)" />
-    </svg>
+    <li className="list__item">
+      <div className="list__main">
+        <Link className="list__title" to={`/applications/${app.id}`}>
+          {job?.company}, {job?.title}
+        </Link>
+        <p className="list__meta">{detail}</p>
+      </div>
+      <ModeBadge mode={app.mode} />
+      <div className="row">
+        {app.status === 'awaiting-approval' && (
+          <>
+            <button type="button" className="btn btn--primary btn--sm" onClick={() => dispatch({ type: 'app/approve', id: app.id })}>
+              Approve
+            </button>
+            <button type="button" className="btn btn--secondary btn--sm" onClick={() => dispatch({ type: 'app/reject', id: app.id })}>
+              Reject
+            </button>
+          </>
+        )}
+        {app.status === 'blocked' && intervention && (
+          <button type="button" className="btn btn--secondary btn--sm" onClick={() => dispatch({ type: 'event/resolve', id: intervention.id })}>
+            Resolve
+          </button>
+        )}
+        {app.status === 'failed' && (
+          <button type="button" className="btn btn--secondary btn--sm" onClick={() => dispatch({ type: 'app/retry', id: app.id })}>
+            Retry
+          </button>
+        )}
+      </div>
+    </li>
+  )
+}
+
+export function DashboardPage() {
+  const q = useSimulatedQuery((s) => s)
+  const s = q.data
+  const attention = needsAttention(s)
+  const sent = submittedToday(s)
+  const limit = s.settings.limits.daily
+  const kpis = [
+    ['Discovered', s.jobs.length],
+    ['Matched', s.jobs.filter((j) => j.agentDecision.verdict === 'selected').length],
+    ['Submitted', s.applications.filter((a) => a.status === 'submitted' || a.status === 'verified').length],
+    ['Needs attention', attention.length],
+  ] as const
+
+  return (
+    <div className="stack">
+      <PageHeader title="Dashboard" subtitle="What the agent is doing and what needs you." />
+      <AsyncView status={q.status} onRetry={q.retry} emptyTitle="Nothing yet">
+        <div className="stack">
+          {!s.onboarded && (
+            <div className="callout">
+              <div>
+                <strong>Set up your profile to get started</strong>
+                <p className="secondary">The agent needs your roles, skills and rules before it can run.</p>
+              </div>
+              <Link className="btn btn--primary" to="/onboarding">
+                Start onboarding
+              </Link>
+            </div>
+          )}
+          <Hero />
+          <section className="kpis" aria-label="Key indicators">
+            {kpis.map(([label, value]) => (
+              <div key={label} className="kpi">
+                <span className="kpi__value">{value}</span>
+                <span className="kpi__label">{label}</span>
+              </div>
+            ))}
+          </section>
+          <div className="grid-2">
+            <section className="panel" aria-labelledby="attention-title">
+              <div className="panel__header">
+                <h2 id="attention-title" className="panel__title">Needs attention</h2>
+              </div>
+              <div className="panel__body">
+                {attention.length === 0 ? (
+                  <p className="secondary">Nothing needs you right now.</p>
+                ) : (
+                  <ul className="list">
+                    {attention.map((a) => (
+                      <AttentionItem key={a.id} app={a} />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+            <div className="stack">
+              <section className="panel" aria-labelledby="daily-title">
+                <div className="panel__header">
+                  <h2 id="daily-title" className="panel__title">Today</h2>
+                </div>
+                <div className="panel__body stack">
+                  <p>
+                    <strong>{sent}</strong> of {limit} daily applications used
+                  </p>
+                  <div className="progress" role="progressbar" aria-label="Daily limit used" aria-valuemin={0} aria-valuemax={limit} aria-valuenow={sent}>
+                    <div className="progress__bar" style={{ width: `${Math.min(100, (sent / limit) * 100)}%` }} />
+                  </div>
+                </div>
+              </section>
+              <section className="panel" aria-labelledby="recent-title">
+                <div className="panel__header">
+                  <h2 id="recent-title" className="panel__title">Recent activity</h2>
+                  <Link to="/activity">View all</Link>
+                </div>
+                <div className="panel__body">
+                  {s.events.length === 0 ? (
+                    <p className="secondary">No activity yet.</p>
+                  ) : (
+                    <ul className="list">
+                      {s.events.slice(0, 5).map((e) => (
+                        <li key={e.id} className="list__item">
+                          <div className="list__main">
+                            <p className="list__title">{e.title}</p>
+                            {e.detail && <p className="list__meta">{e.detail}</p>}
+                          </div>
+                          <span className="mono muted">{formatTime(e.at)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </AsyncView>
+    </div>
   )
 }

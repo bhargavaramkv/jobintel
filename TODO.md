@@ -2,6 +2,19 @@
 
 All planned phases (1–9) are implemented. See `docs/SECURITY.md` and `docs/RECOVERY.md`.
 
+## V2 Phase 1: UI revamp (prototype)
+
+Status: Prototype (mock data, simulated agent). Design and routes: `docs/UI_V2.md`. Rollback point: git tag `ui-v1-final` (= `a44d84d`).
+The A-track UI (inbox, sync) is retired from the UI while its domain code is kept.
+
+- [x] Dashboard
+- [x] Onboarding
+- [x] Resumes
+- [x] Discovery
+- [x] Applications
+- [x] Activity
+- [x] Settings
+
 ## AI automation (separate track, A1–A8)
 
 Design: `docs/AI_AUTOMATION_ARCHITECTURE.md`. Plan and gates: `docs/AI_AUTOMATION_ROADMAP.md`.

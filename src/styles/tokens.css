@@ -1,24 +1,29 @@
-/* JobIntel design tokens: dark-only, blue/cyan accent. No purple. */
+/* JobIntel design tokens: dark-first, blue accent, cyan only for "live". System fonts, no web fonts. */
 :root {
   color-scheme: dark;
 
-  --bg: #070b12;
-  --bg-elevated: #0b111b;
-  --surface: #0d1420;
-  --surface-hover: #111d2b;
-  --surface-sunken: #090e17;
-  --border: #1d2a3a;
-  --border-strong: #2a3b50;
+  --bg: #05080f;
+  --bg-elevated: #080d17;
+  --surface: #0a111c;
+  --surface-hover: #0f1928;
+  --surface-sunken: #070c14;
+  --border: #172335;
+  --border-strong: #26384e;
 
-  --text-primary: #eaf2fa;
+  --text-primary: #e8f0f9;
   --text-secondary: #9aaabd;
-  --text-muted: #7a8a9e; /* lifted from #68788C for AA contrast on --surface */
+  --text-muted: #7d8da1;
 
-  --accent: #16b8ff;
-  --accent-strong: #39c8ff;
-  --accent-soft: rgba(22, 184, 255, 0.12);
-  --accent-line: rgba(22, 184, 255, 0.35);
-  --on-accent: #04121c;
+  --accent: #22b8ff;
+  --accent-strong: #5cccff;
+  --accent-soft: rgba(34, 184, 255, 0.12);
+  --accent-line: rgba(34, 184, 255, 0.38);
+  --accent-glow: 0 0 0 1px rgba(34, 184, 255, 0.35), 0 0 24px rgba(34, 184, 255, 0.18);
+  --on-accent: #03121c;
+
+  /* Cyan means "live": the agent is running. Never used for anything static. */
+  --live: #36e0e0;
+  --live-soft: rgba(54, 224, 224, 0.14);
 
   --success: #35d39a;
   --success-soft: rgba(53, 211, 154, 0.12);
@@ -27,9 +32,8 @@
   --danger: #ff6b78;
   --danger-soft: rgba(255, 107, 120, 0.12);
 
-  --font-sans: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
@@ -51,18 +55,24 @@
   --radius: 10px;
   --radius-lg: 14px;
 
-  --rail-width: 80px;
+  --rail-width: 72px;
+  --bottom-bar-height: 64px;
   --header-height: 60px;
   --content-max: 1280px;
+  --gutter: 16px;
 
   --ease: cubic-bezier(0.2, 0, 0, 1);
-  --dur: 150ms;
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 320ms;
 
   --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-strong);
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --dur-fast: 0ms;
     --dur: 0ms;
+    --dur-slow: 0ms;
   }
 }
