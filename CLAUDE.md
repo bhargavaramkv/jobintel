@@ -1,16 +1,18 @@
 # JobIntel agent guide
 
-Local-first autonomous job-search agent. Current scope: Phase 0 foundation only (see docs/implementation-roadmap.md).
+Local-first autonomous job-search agent. Current scope: Phase 1 execution engine (see docs/implementation-roadmap.md).
 
 ## Layout
 
-| Path                 | Purpose                                              |
-| -------------------- | ---------------------------------------------------- |
-| `apps/api`           | Fastify + TypeScript + Prisma (SQLite)               |
-| `apps/web`           | React + Vite command workspace                       |
-| `packages/contracts` | Zod schemas and types shared by api and web          |
-| `docs/`              | Architecture, requirements, autonomy policy, roadmap |
-| `e2e/`               | Playwright smoke test (root `playwright.config.ts`)  |
+| Path                  | Purpose                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| `apps/api`            | Fastify + TypeScript + Prisma (SQLite)                                               |
+| `apps/api/src/engine` | Execution engine: state machine, repository, scheduler, executor, handlers, commands |
+| `apps/api/src/routes` | HTTP routes: JSON endpoints (`engine.ts`) and SSE stream (`events.ts`)               |
+| `apps/web`            | React + Vite command workspace and status panel                                      |
+| `packages/contracts`  | Zod schemas and types shared by api and web                                          |
+| `docs/`               | Architecture, requirements, autonomy policy, roadmap                                 |
+| `e2e/`                | Playwright tests (`smoke.spec.ts`, `engine.spec.ts`); `api-process.ts` runs the API  |
 
 ## Commands
 

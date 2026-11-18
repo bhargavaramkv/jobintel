@@ -8,7 +8,7 @@ Find relevant roles, evaluate fit, tailor a resume from a master LaTeX resume, a
 
 ## Capabilities
 
-All of the following are **planned**. Only the Phase 0 foundation exists today.
+All of the following are **planned**. Only the Phase 0 foundation and the Phase 1 execution engine exist today.
 
 - Job discovery across sources
 - Evaluation and scoring of roles against the candidate profile
@@ -19,7 +19,38 @@ All of the following are **planned**. Only the Phase 0 foundation exists today.
 
 ## Current status
 
-Phase 0 (foundation) only: monorepo, API with a health route backed by SQLite, a command workspace supporting `help` and `status`, shared contracts, CI. There is no job discovery, resume tailoring or application automation yet. See [docs/implementation-roadmap.md](docs/implementation-roadmap.md).
+Phases 0 and 1: monorepo, API with a health route backed by SQLite, the execution engine with its command workspace, shared contracts, CI. There is no job discovery, resume tailoring or application automation yet. See [docs/implementation-roadmap.md](docs/implementation-roadmap.md).
+
+## Phase 1: execution engine
+
+The API runs a persistent task engine in-process. A plan is a set of tasks with dependencies; the engine runs them, retries and recovers them after a restart, and can pause and resume. The only task types are the demo handlers `system.echo`, `system.delay` and `system.health-check`.
+
+Commands, typed in the workspace (natural language is rejected):
+
+| Command                                | Purpose                                           |
+| -------------------------------------- | ------------------------------------------------- |
+| `/help`                                | List commands                                     |
+| `/status`                              | Engine state, active slots, task counts, database |
+| `/tasks list` / `/tasks list <status>` | List tasks, optionally filtered by status         |
+| `/tasks show <id>`                     | One task with its recent events                   |
+| `/tasks cancel <id>`                   | Cancel a task                                     |
+| `/plans demo`                          | Create the demo plan (a four-task diamond)        |
+| `/plans create <json>`                 | Create a plan from a JSON plan spec               |
+| `/plans list`                          | List plans                                        |
+| `/plans show <id>`                     | One plan with its tasks                           |
+| `/pause`                               | Stop starting new tasks                           |
+| `/resume`                              | Start tasks again                                 |
+
+Run locally (Node 22 or newer):
+
+```
+npm ci
+npm run db:generate
+npm run db:migrate
+npm run dev
+```
+
+Then open http://localhost:5173 and type `/help`. Stop `npm run dev` before running `db:migrate` again.
 
 ## Technology
 

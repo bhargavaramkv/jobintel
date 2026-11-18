@@ -16,3 +16,73 @@ model AuditEvent {
   outcome   String
   detail    String? // JSON text
 }
+
+model Plan {
+  id             Int       @id @default(autoincrement())
+  name           String?
+  status         String // PlanStatus: ACTIVE | COMPLETED | FAILED | CANCELLED (derived cache)
+  idempotencyKey String?   @unique
+  requestHash    String? // sha256 of the command text, for idempotency-key conflict detection
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
+  tasks          Task[]
+}
+
+model Task {
+  id                Int              @id @default(autoincrement())
+  planId            Int
+  plan              Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  key               String // plan-local id from the plan spec, e.g. "fetch-a"
+  type              String // handler type, e.g. "system.echo"
+  status            String // TaskStatus
+  priority          Int // 0..9, higher runs first
+  input             String // JSON text, validated against the handler schema
+  result            String? // JSON text
+  error             String? // JSON text: { code, message }
+  attempts          Int              @default(0)
+  maxAttempts       Int
+  timeoutMs         Int
+  idempotencyKey    String           @unique // `${planId}:${key}`
+  leaseOwner        String? // instance id of the claiming process
+  leaseExpiresAt    DateTime?
+  availableAt       DateTime? // earliest time a RETRYING task may be re-queued
+  cancelRequestedAt DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  startedAt         DateTime? // start of the latest attempt
+  completedAt       DateTime? // set on any terminal state
+  dependsOn         TaskDependency[] @relation("dependent")
+  dependents        TaskDependency[] @relation("dependency")
+
+  @@index([status, priority, id])
+  @@index([planId])
+}
+
+model TaskDependency {
+  taskId      Int
+  dependsOnId Int
+  task        Task @relation("dependent", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn   Task @relation("dependency", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, dependsOnId])
+  @@index([dependsOnId])
+}
+
+model ExecutionEvent {
+  id        Int      @id @default(autoincrement()) // SSE event id
+  createdAt DateTime @default(now())
+  type      String
+  planId    Int?
+  taskId    Int?
+  data      String // JSON text
+
+  @@index([planId])
+  @@index([taskId])
+}
+
+model SystemState {
+  id        Int      @id // always 1
+  paused    Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}

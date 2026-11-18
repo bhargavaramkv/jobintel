@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './api-process';
 
 test('shows the wordmark and reports database ok', async ({ page }) => {
   await page.goto('/');

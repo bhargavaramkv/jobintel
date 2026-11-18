@@ -12,7 +12,19 @@ export default defineConfig(({ mode }) => {
       host: '127.0.0.1',
       port: 5173,
       strictPort: true,
-      proxy: { '/api': `http://127.0.0.1:${apiPort}` },
+      proxy: {
+        '/api': {
+          target: `http://127.0.0.1:${apiPort}`,
+          // When the API dies, Vite either leaves an open stream hanging (headers already sent) or
+          // answers 500 (which makes EventSource give up for good). Dropping the socket instead
+          // is a network error, so the browser keeps retrying and resends Last-Event-ID.
+          configure: (proxy) => {
+            proxy.on('error', (_err, req, res) => {
+              if (req.url?.startsWith('/api/events') && 'destroy' in res) res.destroy();
+            });
+          },
+        },
+      },
     },
     test: { environment: 'jsdom', include: ['src/**/*.test.tsx'] },
   };
