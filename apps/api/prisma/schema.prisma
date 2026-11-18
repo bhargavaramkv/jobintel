@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model AuditEvent {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  actor     String
+  action    String
+  target    String?
+  outcome   String
+  detail    String? // JSON text
+}

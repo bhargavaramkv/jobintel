@@ -1,43 +1,14 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
 node_modules
 dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+coverage
+test-results
+playwright-report
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+*.log
+.vscode
 .idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Playwright
-test-results/
-playwright-report/
-
-# graphify: commit graph.json, GRAPH_REPORT.md, manifest.json, labels; ignore machine-local/derived files
-graphify-out/cache/
-graphify-out/graph.html
-graphify-out/cost.json
-graphify-out/.graphify_python
-graphify-out/.graphify_root
-graphify-out/.graphify_build_state.json
-graphify-out/.graphify_labels.pending.json
-graphify-out/20*/
-
-# Never commit personal backups or exports
-*.jibak.json
-*.backup.json
-
+apps/api/src/generated
