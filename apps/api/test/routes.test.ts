@@ -125,6 +125,12 @@ describe('commands', () => {
     expectError(await command('/tasks show 99999'), 404, 'NOT_FOUND');
   });
 
+  it('rejects oversized ids in commands with INVALID_ARGUMENTS, not 500', async () => {
+    expectError(await command('/tasks show 99999999999999999999999'), 400, 'INVALID_ARGUMENTS');
+    expectError(await command('/tasks cancel 99999999999999999999999'), 400, 'INVALID_ARGUMENTS');
+    expectError(await command('/plans show 99999999999999999999999'), 400, 'INVALID_ARGUMENTS');
+  });
+
   it('pauses and resumes through commands', async () => {
     expect((await command('/pause')).json().output).toBe('paused');
     expect((await command('/pause')).json().output).toBe('already paused');
@@ -204,6 +210,20 @@ describe('REST routes', () => {
     expect(resumed.json().status.paused).toBe(false);
   });
 
+  it('writes a task.cancel audit row in the same write as the cancel', async () => {
+    await engine.pause();
+    const { taskId } = await seedTask(db.prisma, { type: 'system.echo', status: 'QUEUED' });
+    expect(
+      (await app.inject({ method: 'POST', url: `/api/tasks/${taskId}/cancel` })).statusCode,
+    ).toBe(200);
+    const rows = await db.prisma.auditEvent.findMany({
+      where: { action: 'task.cancel', target: `task:${taskId}` },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.outcome).toBe('ok');
+    await engine.resume();
+  });
+
   it('health still works', async () => {
     const res = await app.inject({ url: '/api/health' });
     expect(res.statusCode).toBe(200);
@@ -229,6 +249,34 @@ describe('guards and envelope', () => {
     expect(
       (await app.inject({ url: '/api/health', headers: { host: 'localhost:3000' } })).statusCode,
     ).toBe(200);
+  });
+
+  it('rejects cross-site POSTs to state-changing routes but allows loopback origins', async () => {
+    const evil = { origin: 'https://evil.example' };
+    expectError(
+      await app.inject({ method: 'POST', url: '/api/system/pause', headers: evil }),
+      403,
+      'FORBIDDEN_ORIGIN',
+    );
+    expectError(
+      await app.inject({ method: 'POST', url: '/api/system/resume', headers: evil }),
+      403,
+      'FORBIDDEN_ORIGIN',
+    );
+    expectError(
+      await app.inject({ method: 'POST', url: '/api/tasks/1/cancel', headers: evil }),
+      403,
+      'FORBIDDEN_ORIGIN',
+    );
+    const status = await app.inject({ url: '/api/system/status' });
+    expect(systemStatusSchema.parse(status.json()).paused).toBe(false);
+    const local = await app.inject({
+      method: 'POST',
+      url: '/api/system/pause',
+      headers: { origin: 'http://localhost:5173' },
+    });
+    expect(local.statusCode).toBe(200);
+    await engine.resume();
   });
 
   it('uses the envelope for 404, 413, 415 and bad JSON', async () => {

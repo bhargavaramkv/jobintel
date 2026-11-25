@@ -41,6 +41,8 @@ export interface TransitionArgs {
   patch?: Omit<Prisma.TaskUpdateManyMutationInput, 'status'>;
   result?: unknown;
   error?: TaskErrorInfo;
+  /** Written in the same transaction as the transition, so state and audit cannot diverge. */
+  audit?: { actor: string; action: string; target?: string };
 }
 
 export type CreatePlanOutcome =
@@ -105,6 +107,7 @@ export async function transitionTask(tx: Tx, args: TransitionArgs): Promise<bool
     },
   });
   if (res.count !== 1) return false;
+  if (args.audit) await audit(tx, args.audit);
 
   const task = await tx.task.findUniqueOrThrow({ where: { id: taskId } });
   await appendEvent(tx, {
@@ -399,11 +402,15 @@ export function createRepository(prisma: PrismaClient, bus: EventBus) {
 
     /** Flag a RUNNING task for cancellation without changing its status. */
     async requestCancel(taskId: number): Promise<boolean> {
-      const res = await prisma.task.updateMany({
-        where: { id: taskId, status: 'RUNNING' },
-        data: { cancelRequestedAt: new Date() },
+      return write(async (tx) => {
+        const res = await tx.task.updateMany({
+          where: { id: taskId, status: 'RUNNING' },
+          data: { cancelRequestedAt: new Date() },
+        });
+        if (res.count !== 1) return false;
+        await audit(tx, { actor: 'user', action: 'task.cancel', target: `task:${taskId}` });
+        return true;
       });
-      return res.count === 1;
     },
 
     /** Returns true when the state changed. Idempotent. */

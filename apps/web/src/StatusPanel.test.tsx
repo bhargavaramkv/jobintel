@@ -76,6 +76,29 @@ describe('StatusPanel', () => {
     await waitFor(() => expect(calls.some((c) => c.key === 'POST /api/tasks/4/cancel')).toBe(true));
   });
 
+  it('treats a 409 on cancel as a refresh, not an error', async () => {
+    const running = task({
+      id: 5,
+      key: 'late',
+      status: 'RUNNING',
+      startedAt: '2026-11-18T10:00:01.000Z',
+    });
+    const { calls } = stubFetch({
+      'GET /api/tasks': () => ({ body: { tasks: [running] } }),
+      'POST /api/tasks/5/cancel': () => ({
+        status: 409,
+        body: { error: { code: 'INVALID_TRANSITION', message: 'task is COMPLETED' } },
+      }),
+    });
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel task 5' }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.key === 'POST /api/tasks/5/cancel')).toBe(true);
+      expect(calls.filter((c) => c.key === 'GET /api/tasks').length).toBeGreaterThanOrEqual(2);
+    });
+    expect(screen.queryByText('action failed')).toBeNull();
+  });
+
   it('does not offer cancel for finished tasks', async () => {
     stubFetch({
       'GET /api/tasks': () => ({ body: { tasks: [task({ status: 'COMPLETED' })] } }),

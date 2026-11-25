@@ -1,6 +1,6 @@
 # Execution engine design (Phase 1)
 
-Status: design, not yet implemented. Baseline: commit `27bb248` (Phase 0). This document is the single source for the Phase 1 build. Where it disagrees with the brief, the reason is given in place.
+Status: implemented (Phase 1 is done; see the roadmap). This document is the design record. Baseline: commit `27bb248` (Phase 0). This document is the single source for the Phase 1 build. Where it disagrees with the brief, the reason is given in place.
 
 ## 0. Baseline facts and deviations from the brief
 
@@ -485,7 +485,7 @@ The `Task` DTO is `{ id, planId, key, type, status, priority, attempts, maxAttem
 
 ## 12. Security and privacy
 
-- The bind stays `127.0.0.1`. **Host check** in an `onRequest` hook: reject with `403 FORBIDDEN_HOST` unless the `Host` hostname is `127.0.0.1` or `localhost` (any port, because the Vite proxy forwards `127.0.0.1:5173`). This blocks DNS rebinding. No CORS plugin, so cross-origin pages cannot read responses, and the JSON content-type requirement forces a preflight that fails.
+- The bind stays `127.0.0.1`. **Host check** in an `onRequest` hook: reject with `403 FORBIDDEN_HOST` unless the `Host` hostname is `127.0.0.1` or `localhost` (any port, because the Vite proxy forwards `127.0.0.1:5173`). This blocks DNS rebinding. No CORS plugin, so cross-origin pages cannot read responses, and the JSON content-type requirement forces a preflight that fails. Simple POSTs with no body (`/api/system/pause`, `/api/system/resume`, `/api/tasks/:id/cancel`) skip the preflight, so the same `onRequest` hook also rejects any non-GET request whose `Origin` header is not `127.0.0.1` or `localhost` with `403 FORBIDDEN_ORIGIN`.
 - Size limits: request body 64 KB; command 32 KB; task input 16 KB; result 64 KB; error message 1 000 chars; log message 500 chars and 100 per attempt; at most 50 tasks per plan; at most 10 SSE streams; list `limit` at most 200.
 - All request and PlanSpec schemas are `z.strictObject`; unknown fields are rejected with 400.
 - What is persisted in events and audit: ids, keys, handler types, statuses, error codes and truncated messages, counts. Never task input or result, raw command text (only its sha256), headers, or stack traces. Fastify's logger stays off. Console logs carry ids and codes only.
