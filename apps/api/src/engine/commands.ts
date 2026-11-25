@@ -61,7 +61,7 @@ function invalid(usage: string): CommandError {
 }
 
 function parseId(token: string | undefined): number | undefined {
-  return token !== undefined && /^[1-9]\d*$/.test(token) ? Number(token) : undefined;
+  return token !== undefined && /^[1-9]\d{0,14}$/.test(token) ? Number(token) : undefined;
 }
 
 /** Pure command parser. No I/O, no LLM. */

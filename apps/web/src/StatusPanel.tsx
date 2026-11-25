@@ -41,7 +41,10 @@ export function StatusPanel({ tick }: { tick: number }) {
     selectedRef.current = selected;
   }, [selected]);
 
+  const latest = useRef(0);
   const refresh = useCallback(async () => {
+    // Only the newest refresh may write state, so a slow older response cannot overwrite it.
+    const seq = ++latest.current;
     try {
       const id = selectedRef.current;
       const [s, p, t, d] = await Promise.all([
@@ -50,13 +53,14 @@ export function StatusPanel({ tick }: { tick: number }) {
         fetchTasks(),
         id === null ? Promise.resolve(null) : fetchTaskDetail(id).catch(() => null),
       ]);
+      if (seq !== latest.current) return;
       setStatus(s);
       setPlans(p);
       setTasks(t);
       if (id !== null && id === selectedRef.current) setDetail(d);
       setProblem('');
     } catch {
-      setProblem('status unavailable');
+      if (seq === latest.current) setProblem('status unavailable');
     }
   }, []);
 

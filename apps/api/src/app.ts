@@ -8,6 +8,7 @@ import { registerEventRoutes, type EventRouteOptions } from './routes/events';
 export const VERSION = '0.0.0';
 
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'localhost']);
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export function sendError(
   reply: FastifyReply,
@@ -41,6 +42,15 @@ export function buildApp(
   app.addHook('onRequest', async (request, reply) => {
     if (!ALLOWED_HOSTS.has(hostnameOf(request.headers.host))) {
       return sendError(reply, 403, 'FORBIDDEN_HOST', 'requests must use 127.0.0.1 or localhost');
+    }
+    // Blocks cross-site writes: simple POSTs (no JSON body) skip the CORS preflight.
+    const origin = request.headers.origin;
+    if (
+      origin !== undefined &&
+      !SAFE_METHODS.has(request.method) &&
+      !ALLOWED_HOSTS.has(hostnameOf(origin.replace(/^[a-z]+:\/\//i, '')))
+    ) {
+      return sendError(reply, 403, 'FORBIDDEN_ORIGIN', 'cross-origin requests are not allowed');
     }
   });
 

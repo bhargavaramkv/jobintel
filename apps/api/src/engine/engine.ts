@@ -45,7 +45,6 @@ export function createEngine(deps: EngineDeps) {
         case 'RUNNING':
           if (await repo.requestCancel(id)) {
             scheduler.abortTask(id, 'cancel');
-            await repo.audit({ actor: 'user', action: 'task.cancel', target: `task:${id}` });
             return { kind: 'requested', task: await dto() };
           }
           break;
@@ -56,9 +55,9 @@ export function createEngine(deps: EngineDeps) {
               from: row.status as 'PENDING' | 'BLOCKED' | 'QUEUED' | 'RETRYING',
               to: 'CANCELLED',
               error: { code: 'CANCELLED', message: 'cancelled' },
+              audit: { actor: 'user', action: 'task.cancel', target: `task:${id}` },
             })
           ) {
-            await repo.audit({ actor: 'user', action: 'task.cancel', target: `task:${id}` });
             scheduler.wake();
             return { kind: 'cancelled', task: await dto() };
           }

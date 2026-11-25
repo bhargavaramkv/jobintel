@@ -73,7 +73,9 @@ export async function fetchTaskDetail(
 }
 
 export async function cancelTask(id: number): Promise<void> {
-  await getJson(`/api/tasks/${id}/cancel`, { method: 'POST' });
+  const res = await fetch(`/api/tasks/${id}/cancel`, { method: 'POST' });
+  // 409: the task finished before the click landed; the refresh that follows shows the truth.
+  if (!res.ok && res.status !== 409) throw new Error(`HTTP ${res.status}`);
 }
 
 export async function setPaused(paused: boolean): Promise<void> {
